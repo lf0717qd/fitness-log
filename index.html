@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>健身记录助手</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0f766e">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --primary:#0f766e; --primary-dark:#115e59; --primary-light:#ccfbf1; --primary-bg:#f0fdfa;
+    --bg:#f1f5f9; --card:#ffffff; --line:#e2e8f0; --text:#0f172a; --sub:#64748b;
+    --green:#16a34a; --green-bg:#f0fdf4; --amber:#d97706; --amber-bg:#fffbeb; --red:#dc2626; --red-bg:#fef2f2;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px; line-height:1.5;
+    padding-bottom:90px; overflow-x:hidden;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:0 12px;}
+  header.top{
+    position:sticky;top:0;z-index:20;background:linear-gradient(135deg,#0f766e,#0d9488);
+    color:#fff;padding:14px 16px 12px;box-shadow:0 2px 8px rgba(15,118,110,.25);
+  }
+  header.top h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.5px;}
+  header.top .date-line{font-size:12.5px;opacity:.9;margin-top:2px;}
+  nav.tabs{
+    position:sticky;top:52px;z-index:19;display:flex;background:#fff;border-bottom:1px solid var(--line);
+  }
+  nav.tabs button{
+    flex:1;border:0;background:transparent;padding:12px 4px;font-size:14.5px;color:var(--sub);
+    font-weight:600;border-bottom:3px solid transparent;cursor:pointer;
+  }
+  nav.tabs button.active{color:var(--primary);border-bottom-color:var(--primary);}
+  .card{background:var(--card);border-radius:var(--radius);padding:14px;margin:12px 0;box-shadow:0 1px 3px rgba(15,23,42,.06);}
+  .card h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:6px;}
+  .card h2 .tag{font-size:11px;font-weight:500;color:var(--sub);background:var(--bg);padding:2px 8px;border-radius:20px;}
+  .status{border-radius:var(--radius);padding:12px 14px;margin:12px 0;font-size:14px;display:flex;gap:10px;align-items:flex-start;}
+  .status .ico{font-size:22px;line-height:1.2;}
+  .status.ok{background:var(--green-bg);border:1px solid #bbf7d0;}
+  .status.warn{background:var(--amber-bg);border:1px solid #fde68a;}
+  .status.rest{background:var(--red-bg);border:1px solid #fecaca;}
+  .status .small{display:block;font-size:12.5px;color:var(--sub);margin-top:3px;}
+  .status .small b{color:var(--text);}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+  label.fld{display:flex;flex-direction:column;font-size:12px;color:var(--sub);gap:3px;flex:1;min-width:70px;}
+  input,select,textarea{
+    border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:16px;background:#fff;color:var(--text);
+    width:100%;outline:none;min-width:0;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(15,118,110,.12);}
+  textarea{resize:vertical;min-height:54px;}
+  .item-block{background:var(--bg);border-radius:10px;padding:10px;margin-bottom:10px;}
+  .item-block .del{
+    align-self:flex-end;background:#fee2e2;color:var(--red);border:0;border-radius:8px;
+    padding:8px 12px;font-size:13px;cursor:pointer;white-space:nowrap;
+  }
+  .btn{
+    border:0;border-radius:10px;padding:11px 16px;font-size:14.5px;font-weight:600;cursor:pointer;
+  }
+  .btn-add{background:var(--primary-light);color:var(--primary-dark);width:100%;}
+  .btn-save{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:var(--primary);color:#fff;padding:15px;font-size:16px;font-weight:700;border:0;
+    box-shadow:0 -2px 10px rgba(15,118,110,.3);
+  }
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--text);}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;}
+  .btn-row .btn{flex:1 1 0;min-width:0;font-size:13.5px;white-space:normal;line-height:1.4;}
+  .unit{font-size:12px;color:var(--sub);align-self:center;padding-bottom:9px;}
+  .toast{
+    position:fixed;left:50%;bottom:84px;transform:translateX(-50%);
+    background:#0f172a;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;z-index:50;
+    opacity:0;transition:opacity .25s;pointer-events:none;
+  }
+  .toast.show{opacity:.95;}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;}
+  .stat-box{background:var(--bg);border-radius:10px;padding:10px 6px;text-align:center;min-width:0;overflow:hidden;}
+  .stat-box .v{font-size:18px;font-weight:700;color:var(--primary-dark);white-space:nowrap;}
+  .stat-box .l{font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;}
+  .delta-up{color:var(--green);font-size:12px;}
+  .delta-down{color:var(--red);font-size:12px;}
+  .delta-flat{color:var(--sub);font-size:12px;}
+  .part-bar{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;}
+  .part-bar .name{width:38px;flex:none;}
+  .part-bar .track{flex:1;background:var(--bg);border-radius:6px;height:16px;overflow:hidden;}
+  .part-bar .fill{height:100%;background:linear-gradient(90deg,#14b8a6,#0f766e);border-radius:6px;}
+  .part-bar .num{width:24px;text-align:right;flex:none;color:var(--sub);}
+  .pr-card{
+    background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;
+    justify-content:space-between;align-items:center;gap:10px;cursor:pointer;border:1px solid transparent;
+  }
+  .pr-card>div:first-child{min-width:0;}
+  .pr-card .wt{white-space:nowrap;}
+  .pr-card.sel{background:var(--primary-light);border-color:#5eead4;}
+  .pr-card .nm{font-weight:600;font-size:14px;}
+  .pr-card .pt{font-size:12px;color:var(--sub);}
+  .pr-card .wt{font-weight:700;color:var(--primary-dark);font-size:16px;}
+  .hist-item{background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13.5px;}
+  .hist-item .h-head{display:flex;justify-content:space-between;align-items:center;}
+  .hist-item .h-date{font-weight:600;}
+  .hist-item .h-rest{color:var(--sub);}
+  .hist-item .h-detail{color:#334155;margin-top:4px;font-size:13px;overflow-wrap:anywhere;}
+  .hist-item .h-del{background:transparent;border:0;color:var(--red);font-size:13px;cursor:pointer;padding:4px 8px;}
+  .seg{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:10px;}
+  .seg button{flex:1;border:0;background:transparent;padding:8px;border-radius:8px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;}
+  .seg button.active{background:#fff;color:var(--primary-dark);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .empty{text-align:center;color:var(--sub);padding:30px 16px;font-size:14px;}
+  .chart-box{width:100%;overflow:hidden;}
+  .pr-big{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;}
+  .pr-big .b{flex:1 1 0;min-width:0;background:var(--primary-bg);border-radius:10px;padding:10px 4px;text-align:center;overflow:hidden;}
+  .pr-big .b .v{font-size:17px;font-weight:700;color:var(--primary-dark);white-space:nowrap;}
+  .pr-big .b .l{font-size:12px;color:var(--sub);white-space:nowrap;}
+  .pr-list-item{font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;}
+  .muted{color:var(--sub);font-size:12.5px;}
+  .saved-flag{display:inline-block;background:var(--green-bg);color:var(--green);font-size:11.5px;padding:2px 8px;border-radius:20px;margin-left:6px;}
+
+  /* 恢复度卡片 */
+  .rec-card .rec-row{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0;}
+  .rec-card .rec-row .nm{width:32px;flex:none;font-weight:600;color:var(--text);}
+  .rec-card .rec-row .track{flex:1;height:10px;background:var(--bg);border-radius:6px;overflow:hidden;}
+  .rec-card .rec-row .fill{height:100%;border-radius:6px;transition:width .3s;}
+  .rec-card .rec-row .pct{width:40px;text-align:right;flex:none;color:var(--sub);font-variant-numeric:tabular-nums;}
+  .rec-card .rec-row .note{width:50px;text-align:right;flex:none;color:var(--sub);font-size:11.5px;}
+  .verdict{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.45;}
+  .verdict.ok{background:var(--green-bg);color:#166534;}
+  .verdict.warn{background:var(--amber-bg);color:#92400e;}
+  .verdict.rest{background:var(--red-bg);color:#991b1b;}
+  .rpe-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;}
+  .rpe-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 0;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;}
+  .rpe-btn.sel{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .plan-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;}
+  .plan-item:last-child{border-bottom:0;}
+  .plan-item .w{color:var(--primary-dark);font-weight:700;white-space:nowrap;}
+  .plan-tag{display:inline-block;background:var(--primary-light);color:var(--primary-dark);font-size:12px;padding:2px 9px;border-radius:20px;margin-right:6px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>🏋️ 健身记录助手</h1>
+  <div class="date-line" id="todayLine"></div>
+  <div class="date-line" id="storageMode" style="font-size:11.5px;opacity:.85;"></div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="log" class="active">📝 填报</button>
+  <button data-tab="pr">🏆 PR榜</button>
+  <button data-tab="report">📊 报告</button>
+  <button data-tab="history">📅 历史</button>
+</nav>
+
+<div class="wrap">
+
+  <!-- 状态条 -->
+  <div id="statusBar"></div>
+
+  <!-- ========== 填报页 ========== -->
+  <section id="page-log">
+    <div id="planCard"></div>
+    <div class="card">
+      <h2>记录日期 <span class="tag">可补填以前的日子</span></h2>
+      <input type="date" id="logDate">
+      <div id="savedHint" class="muted" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>💪 自由力量 <span class="tag">杠铃 / 哑铃</span></h2>
+      <div id="strengthList"></div>
+      <button class="btn btn-add" id="addStrength">+ 添加自由力量动作</button>
+    </div>
+
+    <div class="card">
+      <h2>🦾 固定器械 / 绳索</h2>
+      <div id="machineList"></div>
+      <button class="btn btn-add" id="addMachine">+ 添加器械动作</button>
+    </div>
+
+    <div class="card">
+      <h2>🚴 有氧 <span class="tag">单车 / 跑步 / 游泳</span></h2>
+      <div id="cardioList"></div>
+      <button class="btn btn-add" id="addCardio">+ 添加有氧</button>
+    </div>
+
+    <div class="card">
+      <h2>🏸 球类 / 其他运动 <span class="tag">不计入疲劳判断</span></h2>
+      <div id="otherList"></div>
+      <button class="btn btn-add" id="addOther">+ 添加球类/其他</button>
+    </div>
+
+    <div class="card">
+      <h2>🚶 步行 / 备注</h2>
+      <div class="row">
+        <label class="fld">今日步数
+          <input type="number" id="stepsInput" inputmode="numeric" placeholder="例如 17000" min="0">
+        </label>
+        <span class="unit">步</span>
+      </div>
+      <label class="fld" style="margin-top:6px;">备注（身体感受、酸痛等，可选）
+        <textarea id="noteInput" placeholder="例如：右肩有点酸、状态一般"></textarea>
+      </label>
+    </div>
+    <div class="card">
+      <h2>😮‍💨 今天练到多累 <span class="tag">1 轻松 · 10 力竭</span></h2>
+      <div class="rpe-grid" id="rpeGrid"></div>
+      <div class="muted" id="rpeHint" style="margin-top:8px;">不选则按 6 计</div>
+    </div>
+  </section>
+
+  <!-- ========== PR页 ========== -->
+  <section id="page-pr" style="display:none;">
+    <div class="card">
+      <h2>🏆 PR 个人纪录</h2>
+      <div id="prActionPicker" class="row" style="margin-bottom:10px;"></div>
+      <div id="prDetail"></div>
+    </div>
+    <div class="card">
+      <h2>全部动作 PR 榜 <span class="tag">点击查看曲线</span></h2>
+      <div id="prBoard"></div>
+    </div>
+  </section>
+
+  <!-- ========== 报告页 ========== -->
+  <section id="page-report" style="display:none;">
+    <div class="card">
+      <div class="seg">
+        <button id="segWeek" class="active">周报</button>
+        <button id="segMonth">月报</button>
+      </div>
+      <div id="reportBody"></div>
+    </div>
+  </section>
+
+  <!-- ========== 历史页 ========== -->
+  <section id="page-history" style="display:none;">
+    <div class="card">
+      <h2>📅 历史记录</h2>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="exportCsv">⬇️ 导出 CSV（Excel 可开）</button>
+        <button class="btn btn-ghost" id="exportJson">⬇️ 备份 JSON</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="importJsonBtn">⬆️ 导入 JSON 备份</button>
+        <input type="file" id="importJsonFile" accept=".json,application/json" style="display:none;">
+      </div>
+      <div class="muted">空着不填的日子自动算休息日，不会出现在下面。建议每周导出一次备份。</div>
+      <div id="historyList" style="margin-top:10px;"></div>
+    </div>
+  </section>
+
+</div>
+
+<button class="btn-save" id="saveBtn">💾 保存当天记录</button>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ 基础数据 ============ */
+
+  // 预置动作：名称 -> 部位
+  var PRESET_STRENGTH = {
+    "杠铃卧推":"胸","哑铃卧推":"胸","上斜杠铃卧推":"胸","上斜哑铃卧推":"胸",
+    "双杠臂屈伸":"胸","哑铃飞鸟":"胸",
+    "引体向上":"背","杠铃划船":"背","哑铃划船":"背","T杠划船":"背",
+    "反向划船":"背","耸肩":"背",
+    "杠铃深蹲":"腿","前蹲":"腿","传统硬拉":"腿","罗马尼亚硬拉":"腿",
+    "哑铃箭步蹲":"腿","保加利亚分腿蹲":"腿","杠铃臀推":"腿","站姿提踵":"腿",
+    "杠铃推举":"肩","哑铃推举":"肩","哑铃侧平举":"肩","哑铃前平举":"肩",
+    "俯身飞鸟":"肩","直立划船":"肩",
+    "杠铃弯举":"手臂","哑铃弯举":"手臂","锤式弯举":"手臂","集中弯举":"手臂",
+    "窄距卧推":"手臂","仰卧臂屈伸":"手臂",
+    "卷腹":"核心","悬垂举腿":"核心","俄罗斯转体":"核心","平板支撑":"核心"
+  };
+  var PRESET_MACHINE = {
+    "坐姿推胸机":"胸","上斜器械推胸":"胸","器械飞鸟":"胸","蝴蝶机夹胸":"胸",
+    "绳索夹胸":"胸","史密斯机卧推":"胸",
+    "高位下拉":"背","窄握下拉":"背","坐姿划船机":"背","胸靠式划船":"背",
+    "直臂下压":"背","单臂绳索划船":"背","辅助引体机":"背",
+    "腿举机":"腿","单腿腿举":"腿","腿屈伸":"腿","腿弯举":"腿","坐姿腿弯举":"腿",
+    "哈克深蹲":"腿","史密斯深蹲":"腿","髋外展机":"腿","髋内收机":"腿","提踵机":"腿",
+    "器械推举机":"肩","史密斯肩推":"肩","反向飞鸟机":"肩","绳索面拉":"肩","绳索侧平举":"肩",
+    "绳索三头下压":"手臂","绳索弯举":"手臂","器械弯举":"手臂","牧师凳弯举":"手臂","器械三头屈伸":"手臂",
+    "卷腹机":"核心","绳索卷腹":"核心","腹轮":"核心"
+  };
+  /* 有氧 / 球类按场景分组，选项仍拼成扁平数组用于校验 */
+  var CARDIO_GROUPS = [
+    ["器械有氧", ["跑步机","单车","椭圆机","划船机","台阶机","滑雪机"]],
+    ["户外有氧", ["跑步","快走","爬坡走","户外骑行","游泳"]],
+    ["跳绳 / 间歇", ["跳绳","战绳","间歇跑(HIIT)","HIIT循环训练"]]
+  ];
+  var OTHER_GROUPS = [
+    ["球类", ["羽毛球","篮球","足球","乒乓球","网球","排球","壁球","高尔夫"]],
+    ["户外", ["游泳","户外骑行","爬山/徒步","飞盘","攀岩"]],
+    ["其他运动", ["拳击/搏击","瑜伽","普拉提","轮滑/滑板","舞蹈"]]
+  ];
+  var CARDIO_TYPES = [];
+  CARDIO_GROUPS.forEach(function(g){ CARDIO_TYPES = CARDIO_TYPES.concat(g[1]); });
+  var OTHER_SPORTS = [];
+  OTHER_GROUPS.forEach(function(g){ OTHER_SPORTS = OTHER_SPORTS.concat(g[1]); });
+  var INTENSITY = ["轻松","中等","激烈"];
+  var PARTS = ["胸","背","腿","肩","手臂","核心"];
+  var CUSTOM = "✚ 自定义动作";
+
+  /* 自定义动作记忆：用过一次就进动作库，存在本机 localStorage */
+  var CUSTOM_LIB_KEY = "fitness_custom_lib_v1";
+  var CUSTOM_LIB = { strength:{}, machines:{} };
+  function loadCustomLib(){
+    try{
+      var raw = JSON.parse(localStorage.getItem(CUSTOM_LIB_KEY) || "{}") || {};
+      CUSTOM_LIB.strength = raw.strength || {};
+      CUSTOM_LIB.machines = raw.machines || {};
+    }catch(e){ CUSTOM_LIB = { strength:{}, machines:{} }; }
+  }
+  function saveCustomLib(){
+    try{ localStorage.setItem(CUSTOM_LIB_KEY, JSON.stringify(CUSTOM_LIB)); }catch(e){}
+  }
+  function rememberCustom(cat, name, part){
+    name = (name||"").trim();
+    if(!name) return;
+    if(PRESET_STRENGTH[name] || PRESET_MACHINE[name]) return;
+    if(!CUSTOM_LIB[cat]) CUSTOM_LIB[cat] = {};
+    if(CUSTOM_LIB[cat][name] === part) return;
+    CUSTOM_LIB[cat][name] = part || "";
+    saveCustomLib();
+  }
+  function actionMap(cat){
+    var base = cat==="strength" ? PRESET_STRENGTH : PRESET_MACHINE;
+    var custom = CUSTOM_LIB[cat] || {};
+    var out = {};
+    Object.keys(base).forEach(function(k){ out[k] = base[k]; });
+    Object.keys(custom).forEach(function(k){ if(!out[k]) out[k] = custom[k]; });
+    return out;
+  }
+  function esc(str){
+    return String(str==null ? "" : str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  loadCustomLib();
+
+
+  /* ============ 存储：电脑服务优先，连不上就用本机 ============ */
+  var records = {};
+  var STORAGE = { mode: "server" };        // server = 电脑上的 SQLite；local = 本机浏览器
+  var LS_KEY = "fitness_records_v1";
+
+  function lsLoad(){
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      return raw ? (JSON.parse(raw) || {}) : {};
+    }catch(e){ return {}; }
+  }
+  function lsSave(){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(records));
+      return true;
+    }catch(e){
+      alert("本机存储写入失败：浏览器空间不足或禁用了本地存储。建议先「备份 JSON」。");
+      return false;
+    }
+  }
+  function saveLocal(){
+    if(lsSave()) return Promise.resolve();
+    return Promise.reject(new Error("local save failed"));
+  }
+  function saveFail(){
+    alert("保存失败。如果是用电脑服务，请确认「启动.bat」或 exe 还开着；如果用的本机存储，请检查浏览器存储空间。");
+  }
+  function saveRecords(){
+    if(STORAGE.mode === "local") return saveLocal();
+    return fetch("/api/records", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(records)
+    }).then(function(r){
+      if(!r.ok) throw new Error("save failed");
+    }).catch(function(err){
+      // 电脑服务断了：退回本机存储，先保住数据
+      STORAGE.mode = "local";
+      renderMode();
+      if(lsSave()){
+        toast("电脑服务未连接，已存到本机");
+        return;
+      }
+      throw err;
+    });
+  }
+  function renderMode(){
+    var el = document.getElementById("storageMode");
+    if(el){
+      el.textContent = STORAGE.mode === "local" ? "📱 数据存在这台设备" : "🖥 数据存在电脑服务";
+    }
+  }
+  function afterLoad(){
+    loadDraft();
+    renderStatus();
+    renderMode();
+  }
+  function bootLoad(){
+    var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    var timer = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 2500);
+    fetch("/api/records", { signal: ctrl ? ctrl.signal : undefined, cache: "no-store" })
+      .then(function(r){
+        clearTimeout(timer);
+        if(!r.ok) throw new Error("no server");
+        return r.json();
+      })
+      .then(function(data){
+        STORAGE.mode = "server";
+        records = data || {};
+        afterLoad();
+      })
+      .catch(function(){
+        clearTimeout(timer);
+        STORAGE.mode = "local";
+        records = lsLoad();
+        var n = Object.keys(records).length;
+        afterLoad();
+        if(n === 0){
+          toast("已切换到本机存储，数据只保存在这台设备上");
+        }
+      });
+  }
+
+  /* ============ 日期工具 ============ */
+  function pad(n){ return (n<10?"0":"")+n; }
+  function fmt(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function parse(s){ var p=s.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function weekdayCN(s){ return ["日","一","二","三","四","五","六"][parse(s).getDay()]; }
+  function todayStr(){ return fmt(new Date()); }
+  // 周一为一周开始：返回该周周一的 Date
+  function mondayOf(d){ var idx=(d.getDay()+6)%7; return addDays(d,-idx); }
+
+  /* ============ 状态 ============ */
+  var draft = null;          // 当前编辑的当天记录
+  var currentDate = todayStr();
+  var reportMode = "week";
+  var selectedAction = null;
+
+  function emptyDay(date){
+    return { date:date, strength:[], machines:[], cardio:[], others:[], steps:"", note:"", rpe:"" };
+  }
+
+  /* ============ Toast ============ */
+  var toastTimer=null;
+  function toast(msg){
+    var t=document.getElementById("toast");
+    t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ t.classList.remove("show"); },1800);
+  }
+
+  /* ============ Tab 切换 ============ */
+  document.querySelectorAll("nav.tabs button").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      document.querySelectorAll("nav.tabs button").forEach(function(b){b.classList.remove("active");});
+      btn.classList.add("active");
+      ["log","pr","report","history"].forEach(function(t){
+        document.getElementById("page-"+t).style.display = (t===btn.dataset.tab?"":"none");
+      });
+      document.getElementById("saveBtn").style.display = (btn.dataset.tab==="log"?"block":"none");
+      if(btn.dataset.tab==="pr") renderPR();
+      if(btn.dataset.tab==="report") renderReport();
+      if(btn.dataset.tab==="history") renderHistory();
+      document.getElementById("statusBar").style.display = (btn.dataset.tab==="log" ? "" : "none");
+      if(btn.dataset.tab==="log"){ renderStatus(); renderPlan(); }
+      window.scrollTo(0,0);
+    });
+  });
+
+  /* ============ 填报表单渲染 ============ */
+  function customOption(val){
+    var V = "其他(自定义)";
+    return '<option value="'+V+'"'+(val===V?" selected":"")+'>'+V+'</option>';
+  }
+  function groupOptions(groups, val){
+    var html = "";
+    groups.forEach(function(g){
+      html += '<optgroup label="'+esc(g[0])+'">';
+      g[1].forEach(function(t){
+        html += '<option value="'+esc(t)+'"'+(t===val?" selected":"")+'>'+esc(t)+'</option>';
+      });
+      html += '</optgroup>';
+    });
+    return html;
+  }
+  function recentActions(cat, limit){
+    var seen = {}, order = [];
+    Object.keys(records).sort().reverse().forEach(function(date){
+      var day = records[date] || {};
+      (day[cat] || []).forEach(function(it){
+        if(!it || !it.name) return;
+        if(!(it.name in seen)){ seen[it.name] = 1; order.push(it.name); }
+      });
+    });
+    return order.slice(0, limit);
+  }
+  function optList(map, val, cat){
+    var html = '<option value="">选择动作…</option>';
+    var used = {};
+    function push(names, label){
+      if(!names.length) return;
+      html += '<optgroup label="'+esc(label)+'">';
+      names.forEach(function(n){
+        used[n] = 1;
+        html += '<option value="'+esc(n)+'"'+(n===val?" selected":"")+'>'+esc(n)+'</option>';
+      });
+      html += '</optgroup>';
+    }
+    push(recentActions(cat, 5).filter(function(n){ return map[n] && !used[n]; }), "最近用过");
+    push(Object.keys(map).filter(function(k){ return (CUSTOM_LIB[cat]||{})[k] && !used[k]; }), "我的动作");
+    PARTS.forEach(function(part){
+      push(Object.keys(map).filter(function(k){ return map[k]===part && !used[k]; }), part);
+    });
+    push(Object.keys(map).filter(function(k){ return !used[k] && PARTS.indexOf(map[k])<0; }), "其他");
+    html += '<option value="'+CUSTOM+'"'+(val && !map[val]?" selected":"")+'>'+CUSTOM+'</option>';
+    return html;
+  }
+  function partOptions(part){
+    return PARTS.map(function(p){
+      return '<option value="'+p+'"'+(p===part?" selected":"")+'>'+p+'</option>';
+    }).join("");
+  }
+
+  function renderLiftRow(item, cat, idx, presetMap){
+    var isCustom = item.name && !presetMap[item.name];
+    var nameHtml;
+    if(isCustom){
+      nameHtml = '<label class="fld">动作名称<input type="text" data-cat="'+cat+'" data-idx="'+idx+'" data-field="customName" value="'+(item.name||"").replace(/"/g,"&quot;")+'" placeholder="输入动作名"></label>';
+    }else{
+      nameHtml = '<label class="fld">动作<select data-cat="'+cat+'" data-idx="'+idx+'" data-field="name">'+optList(presetMap,item.name,cat)+'</select></label>';
+    }
+    return '<div class="item-block">'+
+      '<div class="row">'+
+        nameHtml+
+        '<label class="fld" style="max-width:96px;">部位<select data-cat="'+cat+'" data-idx="'+idx+'" data-field="part">'+partOptions(item.part)+'</select></label>'+
+        '<button class="del" data-cat="'+cat+'" data-idx="'+idx+'">删除</button>'+
+      '</div>'+
+      '<div class="row">'+
+        '<label class="fld">重量<input type="number" inputmode="decimal" data-cat="'+cat+'" data-idx="'+idx+'" data-field="weight" value="'+(item.weight==null?"":item.weight)+'" placeholder="60" min="0" step="0.5"></label>'+
+        '<span class="unit">kg</span>'+
+        '<label class="fld">每组次数<input type="number" inputmode="numeric" data-cat="'+cat+'" data-idx="'+idx+'" data-field="reps" value="'+(item.reps==null?"":item.reps)+'" placeholder="8" min="0"></label>'+
+        '<span class="unit">次</span>'+
+        '<label class="fld">组数<input type="number" inputmode="numeric" data-cat="'+cat+'" data-idx="'+idx+'" data-field="sets" value="'+(item.sets==null?"":item.sets)+'" placeholder="3" min="0"></label>'+
+        '<span class="unit">组</span>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function renderCardioRow(item, idx){
+    var isCustom = item.name && CARDIO_TYPES.indexOf(item.name)===-1;
+    var sel = isCustom ? "其他(自定义)" : item.name;
+    var nameHtml;
+    if(sel==="其他(自定义)"){
+      nameHtml = '<label class="fld">项目<input type="text" data-cat="cardio" data-idx="'+idx+'" data-field="customName" value="'+(isCustom?item.name:"").replace(/"/g,"&quot;")+'" placeholder="如 登山机"></label>';
+    }else{
+      nameHtml = '<label class="fld">项目<select data-cat="cardio" data-idx="'+idx+'" data-field="name">'+
+        groupOptions(CARDIO_GROUPS, sel)+customOption(sel)+
+        '</select></label>';
+    }
+    return '<div class="item-block"><div class="row">'+
+      nameHtml+
+      '<label class="fld">时长<input type="number" inputmode="numeric" data-cat="cardio" data-idx="'+idx+'" data-field="duration" value="'+(item.duration==null?"":item.duration)+'" placeholder="53" min="0"></label>'+
+      '<span class="unit">分钟</span>'+
+      '<button class="del" data-cat="cardio" data-idx="'+idx+'">删除</button>'+
+    '</div>'+
+    '<div class="row"><label class="fld">强度（选填，如档位/配速）<input type="text" data-cat="cardio" data-idx="'+idx+'" data-field="intensity" value="'+(item.intensity||"").replace(/"/g,"&quot;")+'" placeholder="如 15档 / 6分配速"></label></div>'+
+    '</div>';
+  }
+
+  function renderOtherRow(item, idx){
+    var isCustom = item.name && OTHER_SPORTS.indexOf(item.name)===-1;
+    var sel = isCustom ? "其他(自定义)" : item.name;
+    var nameHtml;
+    if(sel==="其他(自定义)"){
+      nameHtml = '<label class="fld">项目<input type="text" data-cat="others" data-idx="'+idx+'" data-field="customName" value="'+(isCustom?item.name:"").replace(/"/g,"&quot;")+'" placeholder="如 滑雪"></label>';
+    }else{
+      nameHtml = '<label class="fld">项目<select data-cat="others" data-idx="'+idx+'" data-field="name">'+
+        groupOptions(OTHER_GROUPS, sel)+customOption(sel)+
+        '</select></label>';
+    }
+    return '<div class="item-block"><div class="row">'+
+      nameHtml+
+      '<label class="fld">时长<input type="number" inputmode="numeric" data-cat="others" data-idx="'+idx+'" data-field="duration" value="'+(item.duration==null?"":item.duration)+'" placeholder="90" min="0"></label>'+
+      '<span class="unit">分钟</span>'+
+      '<label class="fld" style="max-width:104px;">强度<select data-cat="others" data-idx="'+idx+'" data-field="intensity">'+
+        '<option value="">选填</option>'+
+        INTENSITY.map(function(t){return '<option value="'+t+'"'+(t===item.intensity?" selected":"")+'>'+t+'</option>';}).join("")+
+      '</select></label>'+
+      '<button class="del" data-cat="others" data-idx="'+idx+'">删除</button>'+
+    '</div></div>';
+  }
+
+  function renderForm(){
+    document.getElementById("strengthList").innerHTML =
+      draft.strength.map(function(it,i){return renderLiftRow(it,"strength",i,actionMap("strength"));}).join("") ||
+      '<div class="muted" style="padding:4px 2px 8px;">今天没练就空着，自动算休息日。</div>';
+    document.getElementById("machineList").innerHTML =
+      draft.machines.map(function(it,i){return renderLiftRow(it,"machines",i,actionMap("machines"));}).join("") ||
+      '<div class="muted" style="padding:4px 2px 8px;">没有器械训练可留空。</div>';
+    document.getElementById("cardioList").innerHTML =
+      draft.cardio.map(function(it,i){return renderCardioRow(it,i);}).join("") ||
+      '<div class="muted" style="padding:4px 2px 8px;">休息日也可以只填单车/步数。</div>';
+    document.getElementById("otherList").innerHTML =
+      draft.others.map(function(it,i){return renderOtherRow(it,i);}).join("") ||
+      '<div class="muted" style="padding:4px 2px 8px;">羽毛球、篮球等填这里。</div>';
+    document.getElementById("stepsInput").value = draft.steps||"";
+    document.getElementById("noteInput").value = draft.note||"";
+    document.getElementById("logDate").value = currentDate;
+    var hint = document.getElementById("savedHint");
+    renderRpe();
+    hint.innerHTML = records[currentDate] ? '<span class="saved-flag">✓ 这一天已有记录，保存会覆盖</span>' : "";
+  }
+
+  // 添加按钮
+  document.getElementById("addStrength").addEventListener("click",function(){
+    syncFields(); draft.strength.push({name:"",part:"胸",weight:"",reps:"",sets:""}); renderForm();
+  });
+  document.getElementById("addMachine").addEventListener("click",function(){
+    syncFields(); draft.machines.push({name:"",part:"背",weight:"",reps:"",sets:""}); renderForm();
+  });
+  document.getElementById("addCardio").addEventListener("click",function(){
+    syncFields(); draft.cardio.push({name:"单车",duration:"",intensity:""}); renderForm();
+  });
+  document.getElementById("addOther").addEventListener("click",function(){
+    syncFields(); draft.others.push({name:"羽毛球",duration:"",intensity:"中等"}); renderForm();
+  });
+
+  // 事件委托：删除 / 下拉变化
+  document.getElementById("page-log").addEventListener("click",function(e){
+    var btn = e.target.closest(".del"); if(!btn) return;
+    syncFields();
+    var cat = btn.dataset.cat, idx = +btn.dataset.idx;
+    draft[cat].splice(idx,1); renderForm();
+  });
+  document.getElementById("page-log").addEventListener("change",function(e){
+    var el = e.target;
+    if(!el.dataset.field) return;
+    syncFields();
+    var cat = el.dataset.cat, idx = +el.dataset.idx, field = el.dataset.field;
+    if(field==="name"){
+      var v = el.value;
+      if(v===CUSTOM){ draft[cat][idx].name = ""; }
+      else{
+        draft[cat][idx].name = v;
+        var mp = actionMap(cat);
+        if(mp[v]) draft[cat][idx].part = mp[v];
+      }
+      renderForm(); return;
+    }
+    draft[cat][idx][field] = el.value;
+    if(field==="customName"){ renderForm(); }
+  });
+  // 数字/文本实时同步（不重渲染，避免失焦）
+  ["stepsInput","noteInput"].forEach(function(id){
+    document.getElementById(id).addEventListener("input",function(){ syncFields(); });
+  });
+  document.getElementById("page-log").addEventListener("input",function(e){
+    var el=e.target;
+    if(el.dataset.field && ["weight","reps","sets","duration","intensity"].indexOf(el.dataset.field)>=0){
+      var cat=el.dataset.cat, idx=+el.dataset.idx;
+      draft[cat][idx][el.dataset.field] = el.value;
+    }
+  });
+
+  // 把步数/备注以及当前 DOM 里的输入同步进 draft（添加/删除行前调用）
+  function syncFields(){
+    draft.steps = document.getElementById("stepsInput").value;
+    draft.note = document.getElementById("noteInput").value;
+    document.querySelectorAll("#page-log [data-field]").forEach(function(el){
+      var cat=el.dataset.cat, idx=+el.dataset.idx, field=el.dataset.field;
+      if(!draft[cat] || !draft[cat][idx]) return;
+      if(field==="customName"){
+        // 自定义名称框代表 name
+        draft[cat][idx].name = el.value.trim();
+      }else if(["weight","reps","sets","duration","intensity","part"].indexOf(field)>=0){
+        draft[cat][idx][field] = el.value;
+      }
+    });
+  }
+
+  // 切换日期
+  document.getElementById("logDate").addEventListener("change",function(e){
+    syncFields();
+    currentDate = e.target.value || todayStr();
+    loadDraft();
+  });
+  function loadDraft(){
+    var src = records[currentDate];
+    draft = src ? JSON.parse(JSON.stringify(src)) : emptyDay(currentDate);
+    renderForm(); renderStatus();
+  }
+
+  /* ============ 保存 ============ */
+  document.getElementById("saveBtn").addEventListener("click",function(){
+    syncFields();
+    // 数字字段转 number
+    ["strength","machines"].forEach(function(cat){
+      draft[cat].forEach(function(it){
+        it.weight = it.weight===""?"":+it.weight;
+        it.reps = it.reps===""?"":+it.reps;
+        it.sets = it.sets===""?"":+it.sets;
+      });
+    });
+    draft.cardio.forEach(function(it){ it.duration = it.duration===""?"":+it.duration; });
+    draft.others.forEach(function(it){ it.duration = it.duration===""?"":+it.duration; });
+    draft.steps = draft.steps===""?"":+draft.steps;
+    draft.rpe = (draft.rpe===""||draft.rpe==null) ? "" : +draft.rpe;
+
+    // 校验：有重量行但没动作名 / 有动作名但没组数
+    var warn = [];
+    ["strength","machines"].forEach(function(cat){
+      draft[cat].forEach(function(it){
+        if(!it.name && (it.weight!==""||it.reps!==""||it.sets!=="")) warn.push("有一行没选动作");
+        if(it.name && (it.sets===""||it.sets<=0)) warn.push("「"+it.name+"」没填组数");
+      });
+    });
+    // 有氧/球类选了项目但没填时长
+    draft.cardio.forEach(function(it){ if(it.name && it.duration==="") warn.push("有一条有氧没填时长（保存时会去掉该行）"); });
+    draft.others.forEach(function(it){ if(it.name && it.duration==="") warn.push("有一条球类/其他运动没填时长（保存时会去掉该行）"); });
+
+    var empty = draft.strength.length===0 && draft.machines.length===0 &&
+                draft.cardio.length===0 && draft.others.length===0 &&
+                draft.steps==="" && !draft.note.trim() && warn.length===0;
+    if(empty){
+      if(!confirm("今天什么都不填，将标记为休息日（不会保存空记录）。确定吗？")) return;
+      delete records[currentDate];
+      saveRecords().then(function(){
+        toast(currentDate+" 已记为休息日 🛌"); loadDraft();
+      }).catch(saveFail);
+      return;
+    }
+    if(warn.length && !confirm(warn[0]+"，仍要保存吗？")) return;
+
+    // 清掉完全空白的行：没名字的、或只选了名字却没填任何数据的
+    ["strength","machines"].forEach(function(cat){
+      draft[cat] = draft[cat].filter(function(it){
+        return it.name && (it.sets!=="" || it.reps!=="" || it.weight!=="");
+      });
+    });
+    draft.cardio = draft.cardio.filter(function(it){return it.name && it.duration!=="";});
+    draft.others = draft.others.filter(function(it){return it.name && it.duration!=="";});
+
+    // 清洗后若没有任何有效内容，不保存空壳记录
+    var stillEmpty = draft.strength.length===0 && draft.machines.length===0 &&
+                draft.cardio.length===0 && draft.others.length===0 &&
+                draft.steps==="" && !draft.note.trim();
+    if(stillEmpty){
+      delete records[currentDate];
+      saveRecords().then(function(){
+        toast("没有有效内容，"+currentDate+" 按休息日处理 🛌"); loadDraft();
+      }).catch(saveFail);
+      return;
+    }
+
+    // 记住这次用到的自定义动作，下次直接在下拉里选
+    ["strength","machines"].forEach(function(cat){
+      draft[cat].forEach(function(it){ rememberCustom(cat, it.name, it.part); });
+    });
+
+    draft.date = currentDate;
+    records[currentDate] = JSON.parse(JSON.stringify(draft));
+    saveRecords().then(function(){
+      toast("已保存 "+currentDate+" ✓"); loadDraft();
+    }).catch(saveFail);
+  });
+
+  /* ============ 统计计算 ============ */
+  function hasLift(day){
+    var r = records[fmt(day)];
+    return !!(r && (((r.strength||[]).length) || ((r.machines||[]).length)));
+  }
+  function dayTonnage(r){
+    var t=0;
+    ["strength","machines"].forEach(function(cat){
+      (r[cat]||[]).forEach(function(it){
+        t += (+it.weight||0)* (+it.reps||0)* (+it.sets||0);
+      });
+    });
+    return Math.round(t);
+  }
+  function dayParts(r){
+    var set={};
+    ["strength","machines"].forEach(function(cat){
+      (r[cat]||[]).forEach(function(it){ if(it.part) set[it.part]=true; });
+    });
+    return Object.keys(set);
+  }
+  // 连续力量训练天数（今天没练则从昨天起算）
+  function liftStreak(){
+    var d = new Date(); var n=0;
+    if(!hasLift(d)) d = addDays(d,-1);
+    while(hasLift(d)){ n++; d=addDays(d,-1); }
+    return n;
+  }
+  function daysSinceLastLift(){
+    var d = new Date(); var n=0;
+    while(n<60 && !hasLift(d)){ d=addDays(d,-1); n++; if(n>59) break; }
+    return hasLift(d)? n : null;
+  }
+  // 每个部位最近一次训练距今天数
+  function partLastDays(){
+    var res={};
+    PARTS.forEach(function(part){
+      for(var i=0;i<30;i++){
+        var d=addDays(new Date(),-i), r=records[fmt(d)];
+        if(r && dayParts(r).indexOf(part)>=0){ res[part]=i; break; }
+      }
+    });
+    return res;
+  }
+
+  /* ============ 恢复度模型（P1） ============ */
+  // 复合动作恢复更慢：Belcher 2019 深蹲/卧推/硬拉约 72h
+  var COMPOUND = {
+    "杠铃深蹲":1,"前蹲":1,"传统硬拉":1,"罗马尼亚硬拉":1,"杠铃卧推":1,"上斜杠铃卧推":1,
+    "窄距卧推":1,"杠铃划船":1,"T杠划船":1,"引体向上":1,"杠铃推举":1,"双杠臂屈伸":1,
+    "杠铃臀推":1,"腿举机":1,"单腿腿举":1,"哈克深蹲":1,"史密斯深蹲":1,"史密斯机卧推":1,
+    "坐姿划船机":1,"高位下拉":1,"坐姿推胸机":1,"器械推举机":1,"史密斯肩推":1,
+    "辅助引体机":1,"胸靠式划船":1,"单臂绳索划船":1,"直臂下压":1,"绳索面拉":1
+  };
+
+  function trainingYears(){
+    var ds = Object.keys(records).sort();
+    if(!ds.length) return 0;
+    return (new Date() - parse(ds[0])) / (365.25*24*3600*1000);
+  }
+  function median(arr){
+    if(!arr.length) return null;
+    var a = arr.slice().sort(function(x,y){ return x-y; });
+    return a[Math.floor(a.length/2)];
+  }
+  // 假设当天 20:00 练完
+  function hoursSinceDate(dateStr, toDate){
+    var p = dateStr.split("-");
+    var finish = new Date(+p[0], +p[1]-1, +p[2], 20, 0, 0);
+    return Math.max(0, (toDate - finish) / 3600000);
+  }
+  function dayPartLoads(r){
+    var out = {};
+    ["strength","machines"].forEach(function(cat){
+      (r[cat]||[]).forEach(function(it){
+        if(!it.name) return;
+        var part = it.part || "其他";
+        if(!out[part]) out[part] = {load:0, sets:0, compound:false};
+        out[part].load += (+it.weight||0)*(+it.reps||0)*(+it.sets||0);
+        out[part].sets += (+it.sets||0);
+        if(COMPOUND[it.name]) out[part].compound = true;
+      });
+    });
+    return out;
+  }
+  function partMedianLoad(part, excludeDate){
+    var vals = [];
+    for(var i=0;i<28;i++){
+      var ds = fmt(addDays(new Date(), -i));
+      if(ds === excludeDate) continue;
+      var r = records[ds]; if(!r) continue;
+      var loads = dayPartLoads(r);
+      if(loads[part] && loads[part].load > 0) vals.push(loads[part].load);
+    }
+    return vals.length >= 2 ? median(vals) : null;
+  }
+  function lastTrained(part, atDate){
+    var limit = fmt(atDate);
+    var keys = Object.keys(records).sort().reverse();
+    for(var i=0;i<keys.length;i++){
+      if(keys[i] > limit) continue;
+      var loads = dayPartLoads(records[keys[i]]);
+      if(loads[part] && loads[part].load > 0) return {date:keys[i], data:loads[part]};
+    }
+    return null;
+  }
+  function partRecovery(part, atDate){
+    var last = lastTrained(part, atDate);
+    if(!last) return {pct:100, days:null, T:null, lastDate:null};
+    var base = last.data.compound ? 72 : 48;
+    var med = partMedianLoad(part, last.date);
+    var R = med ? last.data.load / med : 1;
+    var fR = R < 0.7 ? 0.8 : (R > 1.3 ? 1.2 : 1);
+    var rpe = +(records[last.date].rpe || 0) || 6;
+    var fRpe = rpe <= 6 ? 0.9 : (rpe >= 9 ? 1.15 : 1);
+    var yrs = trainingYears();
+    var fExp = yrs < 1 ? 1.1 : (yrs > 3 ? 0.9 : 1);
+    var T = base * fR * fRpe * fExp;
+    var t = hoursSinceDate(last.date, atDate);
+    var pct = Math.max(0, Math.min(100, (1 - Math.exp(-3 * t / T)) * 100));
+    return {pct:pct, days:t/24, T:T, lastDate:last.date};
+  }
+  function cardioRecovery(atDate){
+    var limit = fmt(atDate);
+    var keys = Object.keys(records).sort().reverse();
+    for(var i=0;i<keys.length;i++){
+      if(keys[i] > limit) continue;
+      var r = records[keys[i]];
+      var mins = 0, factor = 0;
+      (r.cardio||[]).forEach(function(c){
+        mins += +c.duration || 0;
+        var t = String(c.intensity||"");
+        if(/激烈|高强|HIIT|间歇|冲刺/i.test(t)) factor = Math.max(factor, 2);
+        else if(/中等/i.test(t)) factor = Math.max(factor, 1.5);
+        else factor = Math.max(factor, 1);
+      });
+      if(mins > 0){
+        var T = (mins >= 90 || factor >= 2) ? 48 : (mins >= 60 ? 30 : 24);
+        var t2 = hoursSinceDate(keys[i], atDate);
+        var pct = Math.max(0, Math.min(100, (1 - Math.exp(-3 * t2 / T)) * 100));
+        return {pct:pct, days:t2/24, T:T, lastDate:keys[i], mins:mins};
+      }
+    }
+    return {pct:100, days:null, T:null, lastDate:null, mins:0};
+  }
+  function weekStats(){
+    var mon = mondayOf(new Date());
+    var res = {parts:{}, cardioMin:0, liftDays:0};
+    for(var i=0;i<7;i++){
+      var ds = fmt(addDays(mon, i));
+      if(ds > fmt(new Date())) break;
+      var r = records[ds]; if(!r) continue;
+      if((r.strength||[]).length || (r.machines||[]).length) res.liftDays++;
+      (r.cardio||[]).forEach(function(c){ res.cardioMin += +c.duration||0; });
+      var loads = dayPartLoads(r);
+      Object.keys(loads).forEach(function(p){ res.parts[p] = (res.parts[p]||0) + 1; });
+    }
+    return res;
+  }
+  function streakDays(){
+    var n = 0, d = new Date();
+    function trained(dt){
+      var r = records[fmt(dt)];
+      return !!(r && ((r.strength||[]).length || (r.machines||[]).length));
+    }
+    if(!trained(d)) d = addDays(d, -1);
+    while(n < 40 && trained(d)){ n++; d = addDays(d, -1); }
+    return n;
+  }
+
+  /* ============ 今日状态卡 ============ */
+  function recColor(p){ return p >= 85 ? "var(--green)" : (p >= 60 ? "var(--amber)" : "var(--red)"); }
+  function barRow(name, pct, note){
+    var unknown = (pct == null);
+    var w = unknown ? 0 : Math.max(2, Math.round(pct));
+    var color = unknown ? "var(--line)" : recColor(pct);
+    var txt = unknown ? "—" : Math.round(pct) + "%";
+    return '<div class="rec-row"><div class="nm">'+name+'</div>'+
+      '<div class="track"><div class="fill" style="width:'+w+'%;background:'+color+'"></div></div>'+
+      '<div class="pct">'+txt+'</div>'+
+      '<div class="note">'+(note||"")+'</div></div>';
+  }
+  function renderStatus(){
+    var now = new Date();
+    var rows = "", items = [];
+    PARTS.forEach(function(p){
+      var rec = partRecovery(p, now);
+      items.push({part:p, rec:rec});
+      rows += barRow(p, rec.days==null ? null : rec.pct, rec.days==null ? "未记录" : Math.round(rec.days)+"天前");
+    });
+    var c = cardioRecovery(now);
+    rows += barRow("有氧", c.days==null ? null : c.pct, c.days==null ? "未记录" : Math.round(c.days)+"天前");
+
+    var hasData = Object.keys(records).length > 0;
+    var ready = items.filter(function(x){ return x.rec.pct >= 85; }).map(function(x){ return x.part; });
+    var low = items.filter(function(x){ return x.rec.pct < 60; }).map(function(x){ return x.part; });
+    var cls, verdict;
+    if(!hasData){
+      cls = "warn"; verdict = "还没有训练记录，先记 1–3 天，我才能算出恢复度";
+    }else if(streakDays() >= 5){
+      cls = "rest"; verdict = "已连续练 " + streakDays() + " 天，建议明天减载：重量降 20%、组数减 1/3";
+    }else if(ready.length){
+      cls = "ok"; verdict = "今天适合练：<b>" + ready.slice(0,3).join("、") + "</b>";
+    }else{
+      cls = "rest"; verdict = "各部位都还没恢复到 85%，今天建议休息或只做 30 分钟快走";
+    }
+    var sub = [];
+    if(low.length) sub.push("恢复不足：" + low.join("、"));
+    var since = daysSinceLastLift();
+    if(since === 0) sub.push("今天已完成力量训练");
+    else if(since != null) sub.push("距上次力量训练 " + since + " 天");
+
+    document.getElementById("statusBar").innerHTML =
+      '<div class="card rec-card">'+
+        '<h2>🫀 今日恢复度 <span class="tag">按最近一次的训练量和强度估算</span></h2>'+
+        rows+
+        '<div class="verdict '+cls+'">'+verdict+'</div>'+
+        (sub.length ? '<div class="muted" style="margin-top:8px;">'+sub.join(" · ")+'</div>' : '')+
+      '</div>';
+
+    var d = new Date();
+    document.getElementById("todayLine").textContent =
+      "今天 " + todayStr() + " 星期" + ["日","一","二","三","四","五","六"][d.getDay()] + " · 空着不填自动算休息日";
+
+    renderPlan();
+  }
+
+  /* ============ 明日训练建议 ============ */
+  var planOffset = 0;
+  function actionsForPart(part){
+    var seen = {}, out = [];
+    var keys = Object.keys(records).sort().reverse();
+    for(var i=0;i<keys.length && out.length<3;i++){
+      var r = records[keys[i]];
+      ["strength","machines"].forEach(function(cat){
+        (r[cat]||[]).forEach(function(it){
+          if(it.part !== part || !it.name || seen[it.name]) return;
+          seen[it.name] = 1;
+          out.push({name:it.name, weight:it.weight, reps:it.reps, sets:it.sets});
+        });
+      });
+    }
+    if(!out.length){
+      var map = actionMap("strength");
+      Object.keys(map).some(function(k){
+        if(map[k] === part){ out.push({name:k, weight:"", reps:"", sets:""}); }
+        return out.length >= 3;
+      });
+    }
+    return out;
+  }
+  function buildPlan(){
+    var tomorrow = addDays(new Date(), 1);
+    var stats = weekStats();
+    var scored = PARTS.map(function(p){
+      var rec = partRecovery(p, tomorrow);
+      var days = rec.days == null ? 0 : rec.days;
+      var gap = Math.max(0, 2 - (stats.parts[p]||0));
+      var score = 0.45*(rec.pct/100) + 0.30*Math.min(days/7,1) + 0.25*Math.min(gap,3)/3;
+      return {part:p, rec:rec, pct:rec.pct, days:days, rawDays:rec.days, score:score, weekCount:stats.parts[p]||0};
+    }).filter(function(x){ return x.pct >= 85; });
+    scored.sort(function(a,b){ return b.score - a.score; });
+    if(!scored.length) return {mode:"rest"};
+    if(planOffset) scored = scored.slice(planOffset % scored.length).concat(scored.slice(0, planOffset % scored.length));
+    return {mode:"plan", parts: scored.slice(0,2), stats:stats, tomorrow:tomorrow};
+  }
+  function renderPlan(){
+    var box = document.getElementById("planCard");
+    if(!box) return;
+    var plan = buildPlan();
+    var d = addDays(new Date(), 1);
+    var dateLine = fmt(d).slice(5) + " 星期" + ["日","一","二","三","四","五","六"][d.getDay()];
+
+    if(plan.mode === "rest"){
+      box.innerHTML =
+        '<div class="card">'+
+          '<h2>📅 明日建议 <span class="tag">'+dateLine+'</span></h2>'+
+          '<div class="verdict rest">各部位都还没恢复到 85%，明天建议休息，或只做 30 分钟快走 / 轻松有氧。</div>'+
+        '</div>';
+      return;
+    }
+
+    var BODYWEIGHT = {"引体向上":1,"双杠臂屈伸":1,"卷腹":1,"悬垂举腿":1,"平板支撑":1,"反向划船":1,"辅助引体机":1};
+    var perPart = plan.parts.length > 1 ? 2 : 3;
+    var itemsHtml = "", totalSets = 0, totalLoad = 0, reasons = [];
+    plan.parts.forEach(function(x){
+      reasons.push(x.rawDays == null
+        ? x.part + "还没记录过"
+        : x.part + "已休 " + Math.round(x.days) + " 天、本周 " + x.weekCount + " 次");
+      actionsForPart(x.part).slice(0, perPart).forEach(function(it){
+        var sets = +it.sets || 3, reps = +it.reps || 10, w = +it.weight || 0;
+        var isBw = !!BODYWEIGHT[it.name];
+        var shown = (w * reps * sets) || 0;
+        totalSets += sets; totalLoad += shown;
+        var wTxt = w ? (w + 'kg · ') : (isBw ? '自重 · ' : '');
+        itemsHtml += '<div class="plan-item"><span>' + esc(it.name) +
+          (w || isBw ? '' : ' <span class="muted">自选重量</span>') + '</span>' +
+          '<span class="w">' + wTxt + sets + '×' + reps + '</span></div>';
+      });
+    });
+    var minutes = Math.round(totalSets * 3 + 12);
+    var wk = plan.stats;
+    var cardioHint = wk.cardioMin < 150
+      ? '<div class="muted" style="margin-top:8px;">本周有氧 '+wk.cardioMin+' / 150 分钟</div>'
+      : '';
+
+    box.innerHTML =
+      '<div class="card">'+
+        '<h2>📅 明日训练建议 <span class="tag">'+dateLine+'</span></h2>'+
+        '<div style="margin-bottom:6px;">主练：'+
+          plan.parts.map(function(x){ return '<span class="plan-tag">'+x.part+'</span>'; }).join("")+
+        '</div>'+
+        itemsHtml+
+        '<div class="muted" style="margin-top:8px;">预计 '+minutes+' 分钟'+(totalLoad? ' · 负荷约 '+totalLoad+'kg' : '')+'</div>'+
+        '<div class="muted" style="margin-top:4px;">依据：'+reasons.join("；")+'</div>'+
+        cardioHint+
+        '<div class="btn-row"><button class="btn btn-ghost" id="planShuffle">换一组</button></div>'+
+      '</div>';
+  }
+
+  /* ============ 训练强度自评（RPE） ============ */
+  var RPE_WORD = ["","很轻松","轻松","轻松","有点累","中等","中等","比较累","很累","很累","力竭"];
+  function renderRpe(){
+    var grid = document.getElementById("rpeGrid");
+    if(!grid) return;
+    var cur = draft && draft.rpe ? +draft.rpe : 0;
+    var html = "";
+    for(var i=1;i<=10;i++){
+      html += '<button type="button" class="rpe-btn'+(cur===i?" sel":"")+'" data-rpe="'+i+'">'+i+'</button>';
+    }
+    grid.innerHTML = html;
+    var hint = document.getElementById("rpeHint");
+    if(hint) hint.textContent = cur ? ("已选 " + cur + " · " + RPE_WORD[cur]) : "不选则按 6 计（影响恢复时间估算）";
+  }
+  document.getElementById("rpeGrid").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".rpe-btn") : null;
+    if(!b || !draft) return;
+    draft.rpe = +b.dataset.rpe;
+    renderRpe();
+  });
+  document.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("#planShuffle") : null;
+    if(!b) return;
+    planOffset++;
+    renderPlan();
+  });
+
+  /* ============ PR 页 ============ */
+  // 汇总每个动作的历次数据：{name: {part, points:[{date,maxWeight,tonnage}]}}
+  function actionStats(){
+    var map={};
+    Object.keys(records).sort().forEach(function(date){
+      var r=records[date];
+      ["strength","machines"].forEach(function(cat){
+        (r[cat]||[]).forEach(function(it){
+          if(!it.name) return;
+          if(!map[it.name]) map[it.name]={part:it.part||"", points:[]};
+          var maxW=0, ton=0;
+          var w=+it.weight||0, rp=+it.reps||0, st=+it.sets||0;
+          if(w>maxW) maxW=w;
+          ton += w*rp*st;
+          map[it.name].points.push({date:date, maxWeight:maxW, tonnage:Math.round(ton)});
+          if(it.part) map[it.name].part=it.part;
+        });
+      });
+    });
+    return map;
+  }
+
+  function svgLine(points){
+    if(points.length<2){
+      return '<div class="empty">再记一次「'+(selectedAction||"")+'」就能看到进步曲线了（至少 2 次）</div>';
+    }
+    var W=620,H=220,L=46,R=16,T=22,B=34;
+    var vals=points.map(function(p){return p.maxWeight;});
+    var max=Math.max.apply(null,vals), min=Math.min.apply(null,vals);
+    if(max===min){ max=min+5; min=Math.max(0,min-5); }
+    var pad=(max-min)*0.15; max+=pad; min=Math.max(0,min-pad);
+    function x(i){ return L + i*(W-L-R)/(points.length-1); }
+    function y(v){ return T + (1-(v-min)/(max-min))*(H-T-B); }
+    var path=points.map(function(p,i){ return (i?"L":"M")+x(i).toFixed(1)+","+y(p.maxWeight).toFixed(1); }).join(" ");
+    var area=path+" L"+x(points.length-1).toFixed(1)+","+(H-B)+" L"+L+","+(H-B)+" Z";
+    var g="";
+    // 网格
+    for(var i=0;i<=4;i++){
+      var gy=T+i*(H-T-B)/4, gv=max-(max-min)*i/4;
+      g+='<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="#e2e8f0" stroke-width="1"/>';
+      g+='<text x="'+(L-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="#94a3b8">'+gv.toFixed(0)+'</text>';
+    }
+    // 面积 + 线
+    g+='<path d="'+area+'" fill="rgba(15,118,110,0.08)"/>';
+    g+='<path d="'+path+'" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    // 点 + 首末标签
+    points.forEach(function(p,i){
+      g+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.maxWeight).toFixed(1)+'" r="3.5" fill="#0f766e"/>';
+      if(i===0||i===points.length-1||p.maxWeight===Math.max.apply(null,vals)){
+        g+='<text x="'+x(i).toFixed(1)+'" y="'+(y(p.maxWeight)-8).toFixed(1)+'" text-anchor="middle" font-size="11" fill="#115e59" font-weight="bold">'+p.maxWeight+'</text>';
+        g+='<text x="'+x(i).toFixed(1)+'" y="'+(H-B+16)+'" text-anchor="middle" font-size="10.5" fill="#94a3b8">'+p.date.slice(5)+'</text>';
+      }
+    });
+    return '<div class="chart-box"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;">'+g+'</svg></div>';
+  }
+
+  function renderPR(){
+    var stats=actionStats();
+    var names=Object.keys(stats).sort(function(a,b){
+      var ma=0,mb=0; stats[a].points.forEach(function(p){if(p.maxWeight>ma)ma=p.maxWeight;});
+      stats[b].points.forEach(function(p){if(p.maxWeight>mb)mb=p.maxWeight;});
+      return mb-ma;
+    });
+    if(!names.length){
+      document.getElementById("prActionPicker").innerHTML="";
+      document.getElementById("prDetail").innerHTML='<div class="empty">还没有记录，先去「填报」记一次力量训练吧</div>';
+      document.getElementById("prBoard").innerHTML="";
+      return;
+    }
+    if(!stats[selectedAction]) selectedAction=names[0];
+
+    document.getElementById("prActionPicker").innerHTML =
+      '<label class="fld" style="max-width:260px;">选择动作<select id="prSelect">'+
+      names.map(function(n){return '<option value="'+n.replace(/"/g,"&quot;")+'"'+(n===selectedAction?" selected":"")+'>'+n+'（'+(stats[n].part||"未分类")+'）</option>';}).join("")+
+      '</select></label>';
+    document.getElementById("prSelect").addEventListener("change",function(e){
+      selectedAction=e.target.value; renderPR();
+    });
+
+    var pts=stats[selectedAction].points;
+    var maxW=0,maxTon=0,lastW=0,firstDate=pts[0].date;
+    pts.forEach(function(p){ if(p.maxWeight>maxW)maxW=p.maxWeight; if(p.tonnage>maxTon)maxTon=p.tonnage; });
+    lastW=pts[pts.length-1].maxWeight;
+    var diff=lastW-maxW===0 && pts.length>=2 ? "（持平 PR）" : (lastW>=maxW?"":"（距 PR 还差 "+(maxW-lastW)+"kg）");
+
+    document.getElementById("prDetail").innerHTML =
+      '<div class="pr-big">'+
+        '<div class="b"><div class="v">'+maxW+' kg</div><div class="l">PR 最大重量</div></div>'+
+        '<div class="b"><div class="v">'+maxTon+' kg</div><div class="l">单次最大总吨位</div></div>'+
+        '<div class="b"><div class="v">'+lastW+' kg</div><div class="l">最近一次</div></div>'+
+      '</div>'+
+      '<div class="muted" style="margin-bottom:6px;">'+selectedAction+' · 共记录 '+pts.length+' 次，始于 '+firstDate+'　'+diff+'</div>'+
+      svgLine(pts);
+
+    document.getElementById("prBoard").innerHTML = names.map(function(n){
+      var mw=0; stats[n].points.forEach(function(p){if(p.maxWeight>mw)mw=p.maxWeight;});
+      return '<div class="pr-card'+(n===selectedAction?" sel":"")+'" data-name="'+n.replace(/"/g,"&quot;")+'">'+
+        '<div><div class="nm">'+n+'</div><div class="pt">'+(stats[n].part||"")+' · '+stats[n].points.length+' 次</div></div>'+
+        '<div class="wt">'+mw+' kg</div></div>';
+    }).join("");
+    document.querySelectorAll("#prBoard .pr-card").forEach(function(c){
+      c.addEventListener("click",function(){ selectedAction=c.dataset.name; renderPR(); window.scrollTo({top:0,behavior:"smooth"}); });
+    });
+  }
+
+  /* ============ 报告页 ============ */
+  function rangeRecords(start,end){
+    var out=[]; var d=new Date(start);
+    while(fmt(d)<=fmt(end)){
+      var r=records[fmt(d)]; if(r) out.push(r);
+      d=addDays(d,1);
+    }
+    return out;
+  }
+  function summarize(list){
+    var s={liftDays:0,tonnage:0,cardioMin:0,otherMin:0,steps:0,parts:{}};
+    list.forEach(function(r){
+      var isLift=(r.strength&&r.strength.length)||(r.machines&&r.machines.length);
+      if(isLift) s.liftDays++;
+      s.tonnage += dayTonnage(r);
+      (r.cardio||[]).forEach(function(c){s.cardioMin += +c.duration||0;});
+      (r.others||[]).forEach(function(c){s.otherMin += +c.duration||0;});
+      s.steps += +r.steps||0;
+      dayParts(r).forEach(function(p){ s.parts[p]=(s.parts[p]||0)+1; });
+    });
+    return s;
+  }
+  function delta(cur,prev,unit,invert){
+    var d=cur-prev;
+    if(d===0) return '<span class="delta-flat">持平</span>';
+    var good = invert ? d<0 : d>0;
+    return '<span class="'+(good?"delta-up":"delta-down")+'">'+(d>0?"+":"")+d+unit+'</span>';
+  }
+  function partBars(parts){
+    var max=1; PARTS.forEach(function(p){ if((parts[p]||0)>max)max=parts[p]; });
+    return PARTS.map(function(p){
+      var v=parts[p]||0;
+      return '<div class="part-bar"><div class="name">'+p+'</div>'+
+        '<div class="track"><div class="fill" style="width:'+(v/max*100)+'%"></div></div>'+
+        '<div class="num">'+v+'</div></div>';
+    }).join("");
+  }
+
+  function renderReport(){
+    var body=document.getElementById("reportBody");
+    if(reportMode==="week"){
+      var now=new Date();
+      var mon=mondayOf(now);
+      var curStart=mon, curEnd=now;
+      var prevStart=addDays(mon,-7), prevEnd=addDays(mon,-1);
+      var cur=summarize(rangeRecords(curStart,curEnd));
+      var prev=summarize(rangeRecords(prevStart,prevEnd));
+      var elapsed=((now.getDay()+6)%7)+1; // 周一=1
+      var restDays=elapsed-cur.liftDays;
+      body.innerHTML =
+        '<h2 style="font-size:16px;margin:2px 0 8px;">本周（'+fmt(curStart)+' 起）</h2>'+
+        '<div class="stat-grid">'+
+          '<div class="stat-box"><div class="v">'+cur.liftDays+'</div><div class="l">力量训练(天)</div>'+delta(cur.liftDays,prev.liftDays,"天")+'</div>'+
+          '<div class="stat-box"><div class="v">'+cur.tonnage+'</div><div class="l">总吨位(kg)</div>'+delta(cur.tonnage,prev.tonnage,"kg")+'</div>'+
+          '<div class="stat-box"><div class="v">'+cur.cardioMin+'</div><div class="l">有氧(分钟)</div>'+delta(cur.cardioMin,prev.cardioMin,"分")+'</div>'+
+        '</div>'+
+        '<div class="stat-grid">'+
+          '<div class="stat-box"><div class="v">'+cur.otherMin+'</div><div class="l">球类/其他(分)</div></div>'+
+          '<div class="stat-box"><div class="v">'+(cur.steps?cur.steps.toLocaleString():"0")+'</div><div class="l">步数合计</div></div>'+
+          '<div class="stat-box"><div class="v">'+restDays+'</div><div class="l">休息(天)</div></div>'+
+        '</div>'+
+        '<h2 style="font-size:15px;margin:14px 0 4px;">部位分布（本周训练次数）</h2>'+
+        partBars(cur.parts)+
+        '<div class="muted" style="margin-top:10px;">对比的是上周一~周日整周数据；本周还没过完，天数少属正常。</div>';
+    }else{
+      var now2=new Date();
+      var ms=new Date(now2.getFullYear(),now2.getMonth(),1);
+      var me=new Date(now2.getFullYear(),now2.getMonth()+1,0);
+      var cur2=summarize(rangeRecords(ms,now2));
+      // PR 刷新：按时间扫描，本月内首次超越历史最大值
+      var prs=[]; var maxMap={};
+      Object.keys(records).sort().forEach(function(date){
+        var r=records[date];
+        var dayBest={};
+        ["strength","machines"].forEach(function(cat){
+          (r[cat]||[]).forEach(function(it){
+            if(!it.name) return;
+            var w=+it.weight||0;
+            if(!(it.name in dayBest)||w>dayBest[it.name]) dayBest[it.name]=w;
+          });
+        });
+        Object.keys(dayBest).forEach(function(n){
+          var w=dayBest[n];
+          if(n in maxMap && w>maxMap[n] && date.slice(0,7)===fmt(now2).slice(0,7)){
+            prs.push({date:date,name:n,weight:w});
+          }
+          if(!(n in maxMap)||w>maxMap[n]) maxMap[n]=w;
+        });
+      });
+      body.innerHTML =
+        '<h2 style="font-size:16px;margin:2px 0 8px;">'+now2.getFullYear()+'年'+(now2.getMonth()+1)+'月</h2>'+
+        '<div class="stat-grid">'+
+          '<div class="stat-box"><div class="v">'+cur2.liftDays+'</div><div class="l">力量训练(天)</div></div>'+
+          '<div class="stat-box"><div class="v">'+cur2.tonnage+'</div><div class="l">总吨位(kg)</div></div>'+
+          '<div class="stat-box"><div class="v">'+cur2.cardioMin+'</div><div class="l">有氧(分钟)</div></div>'+
+        '</div>'+
+        '<div class="stat-grid">'+
+          '<div class="stat-box"><div class="v">'+cur2.otherMin+'</div><div class="l">球类/其他(分)</div></div>'+
+          '<div class="stat-box"><div class="v">'+(cur2.steps?cur2.steps.toLocaleString():"0")+'</div><div class="l">步数合计</div></div>'+
+          '<div class="stat-box"><div class="v">'+prs.length+'</div><div class="l">本月PR刷新</div></div>'+
+        '</div>'+
+        '<h2 style="font-size:15px;margin:14px 0 4px;">本月部位分布</h2>'+
+        partBars(cur2.parts)+
+        '<h2 style="font-size:15px;margin:14px 0 4px;">🏆 本月刷新的 PR</h2>'+
+        (prs.length? prs.map(function(p){
+          return '<div class="pr-list-item"><span>'+p.date.slice(5)+'　'+p.name+'</span><b>'+p.weight+' kg</b></div>';
+        }).join("") : '<div class="muted">本月还没有刷新 PR，冲一把！</div>');
+    }
+  }
+  document.getElementById("segWeek").addEventListener("click",function(){
+    reportMode="week"; this.classList.add("active");
+    document.getElementById("segMonth").classList.remove("active"); renderReport();
+  });
+  document.getElementById("segMonth").addEventListener("click",function(){
+    reportMode="month"; this.classList.add("active");
+    document.getElementById("segWeek").classList.remove("active"); renderReport();
+  });
+
+  /* ============ 历史页 ============ */
+  function renderHistory(){
+    var dates=Object.keys(records).sort().reverse();
+    var box=document.getElementById("historyList");
+    if(!dates.length){ box.innerHTML='<div class="empty">还没有任何记录</div>'; return; }
+    box.innerHTML = dates.map(function(date){
+      var r=records[date];
+      var lines=[];
+      var lift=[];
+      ["strength","machines"].forEach(function(cat){
+        (r[cat]||[]).forEach(function(it){
+          lift.push(it.name+" "+(it.weight||0)+"kg×"+(it.reps||0)+"×"+(it.sets||0)+"组");
+        });
+      });
+      if(lift.length) lines.push("💪 "+lift.join("，"));
+      var cd=(r.cardio||[]).map(function(c){return c.name+" "+c.duration+"分"+(c.intensity?"("+c.intensity+")":"");});
+      if(cd.length) lines.push("🚴 "+cd.join("，"));
+      var ot=(r.others||[]).map(function(c){return c.name+" "+c.duration+"分"+(c.intensity?"("+c.intensity+")":"");});
+      if(ot.length) lines.push("🏸 "+ot.join("，"));
+      if(r.steps) lines.push("🚶 "+(+r.steps).toLocaleString()+" 步");
+      if(r.rpe) lines.push("😮‍💨 练到 "+(+r.rpe)+" / 10");
+      if(r.note) lines.push("📝 "+r.note);
+      return '<div class="hist-item"><div class="h-head">'+
+        '<span class="h-date">'+date+' 星期'+weekdayCN(date)+'</span>'+
+        '<button class="h-del" data-date="'+date+'">删除</button></div>'+
+        '<div class="h-detail">'+lines.join("<br>")+'</div></div>';
+    }).join("");
+    document.querySelectorAll(".h-del").forEach(function(b){
+      b.addEventListener("click",function(){
+        if(!confirm("确定删除 "+b.dataset.date+" 的记录吗？")) return;
+        delete records[b.dataset.date];
+        saveRecords().then(function(){
+          renderHistory(); renderStatus(); toast("已删除");
+        }).catch(saveFail);
+      });
+    });
+  }
+
+  /* ============ 导出 / 导入（导出文件由后端按数据库生成） ============ */
+  /* ============ 导出（纯前端，服务端/本机存储都能用） ============ */
+  function csvCell(v){
+    var t = String(v==null ? "" : v);
+    return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  function buildCsv(){
+    var rows = [["日期","类型","动作/项目","部位","重量kg","每组次数","组数","时长分钟","强度","步数","备注"]];
+    Object.keys(records).sort().forEach(function(date){
+      var r = records[date] || {};
+      (r.strength||[]).forEach(function(it){
+        rows.push([date,"自由力量",it.name||"",it.part||"",it.weight==null?"":it.weight,
+                   it.reps==null?"":it.reps,it.sets==null?"":it.sets,"","","",""]);
+      });
+      (r.machines||[]).forEach(function(it){
+        rows.push([date,"固定器械",it.name||"",it.part||"",it.weight==null?"":it.weight,
+                   it.reps==null?"":it.reps,it.sets==null?"":it.sets,"","","",""]);
+      });
+      (r.cardio||[]).forEach(function(c){
+        rows.push([date,"有氧",c.name||"","","","","",c.duration==null?"":c.duration,c.intensity||"","",""]);
+      });
+      (r.others||[]).forEach(function(c){
+        rows.push([date,"球类/其他",c.name||"","","","","",c.duration==null?"":c.duration,c.intensity||"","",""]);
+      });
+      if(r.steps || r.note) rows.push([date,"汇总","","","","","","","",r.steps||"",r.note||""]);
+    });
+    return rows.map(function(row){ return row.map(csvCell).join(","); }).join("\r\n");
+  }
+  function downloadFile(name, text, mime){
+    try{
+      var blob = new Blob([text], { type: mime });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+    }catch(e){
+      alert("导出失败：" + (e && e.message ? e.message : e));
+    }
+  }
+  function exportCsv(){
+    downloadFile("fitness_records.csv", "\ufeff" + buildCsv(), "text/csv;charset=utf-8");
+    toast("CSV 已导出");
+  }
+  function exportJson(){
+    downloadFile("fitness_records_backup.json", JSON.stringify(records, null, 2), "application/json;charset=utf-8");
+    toast("JSON 备份已导出");
+  }
+
+  document.getElementById("exportCsv").addEventListener("click", exportCsv);
+  document.getElementById("exportJson").addEventListener("click", exportJson);
+  document.getElementById("importJsonBtn").addEventListener("click",function(){
+    document.getElementById("importJsonFile").click();
+  });
+  document.getElementById("importJsonFile").addEventListener("change",function(e){
+    var f=e.target.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        if(typeof data!=="object") throw new Error("格式不对");
+        if(!confirm("导入将按日期合并（同一天的数据会被覆盖），共 "+Object.keys(data).length+" 天。继续？")) return;
+        Object.keys(data).forEach(function(k){ records[k]=data[k]; });
+        saveRecords().then(function(){ loadDraft(); renderHistory(); toast("导入成功 ✓"); }).catch(saveFail);
+      }catch(err){ alert("导入失败：文件格式不正确"); }
+    };
+    reader.readAsText(f);
+    e.target.value="";
+  });
+
+  /* ============ 初始化（先从本地服务拉取数据） ============ */
+  bootLoad();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw.js").catch(function(){}); });
+}
+</script>
+</body>
+</html>
