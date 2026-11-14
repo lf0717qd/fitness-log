@@ -261,6 +261,9 @@
       <div id="historyList" style="margin-top:10px;"></div>
     </div>
 
+
+  </section>
+
   <!-- ========== 设置页 ========== -->
   <section id="page-me" style="display:none;">
     <div class="card">
@@ -311,7 +314,6 @@
       <div id="snapBox" class="muted" style="margin-top:6px;"></div>
       <div class="muted" style="margin-top:8px;">数据存在这台设备，清浏览器会丢，建议每周导一次。</div>
     </div>
-  </section>
   </section>
 
 </div>
@@ -1066,10 +1068,10 @@
     PARTS.forEach(function(p){
       var rec = partRecovery(p, now);
       items.push({part:p, rec:rec});
-      rows += barRow(p, rec.days==null ? null : rec.pct, rec.days==null ? "未记录" : Math.round(rec.days)+"天前");
+      rows += barRow(p, rec.days==null ? null : rec.pct, rec.days==null ? "未记录" : (rec.days < 1 ? "今天" : Math.round(rec.days)+"天前"));
     });
     var c = cardioRecovery(now);
-    rows += barRow("有氧", c.days==null ? null : c.pct, c.days==null ? "未记录" : Math.round(c.days)+"天前");
+    rows += barRow("有氧", c.days==null ? null : c.pct, c.days==null ? "未记录" : (c.days < 1 ? "今天" : Math.round(c.days)+"天前"));
 
     var hasData = Object.keys(records).length > 0;
     var ready = items.filter(function(x){ return x.rec.pct >= 85; }).map(function(x){ return x.part; });
@@ -1166,7 +1168,7 @@
     plan.parts.forEach(function(x){
       reasons.push(x.rawDays == null
         ? x.part + "还没记录过"
-        : x.part + "已休 " + Math.round(x.days) + " 天、本周 " + x.weekCount + " 次");
+        : (x.days < 1 ? x.part + "今天刚练" : x.part + "已休 " + Math.round(x.days) + " 天") + "、本周 " + x.weekCount + " 次");
       actionsForPart(x.part).slice(0, perPart).forEach(function(it){
         var sets = +it.sets || 3, reps = +it.reps || 10, w = +it.weight || 0;
         var isBw = !!BW_LIB[it.name];
