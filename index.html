@@ -137,6 +137,14 @@
   .plan-item:last-child{border-bottom:0;}
   .plan-item .w{color:var(--primary-dark);font-weight:700;white-space:nowrap;}
   .plan-tag{display:inline-block;background:var(--primary-light);color:var(--primary-dark);font-size:12px;padding:2px 9px;border-radius:20px;margin-right:6px;}
+
+  .energy-card .energy-total{font-size:28px;font-weight:800;color:var(--primary-dark);line-height:1.1;margin:2px 0 8px;}
+  .energy-card .energy-total span{font-size:13px;font-weight:600;color:var(--sub);}
+  .energy-line{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line);}
+  .energy-line:last-child{border-bottom:0;}
+  .energy-line b{color:var(--primary-dark);font-variant-numeric:tabular-nums;}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub);}
+  .chk input{width:auto;margin:0;}
 </style>
 </head>
 <body>
@@ -152,6 +160,7 @@
   <button data-tab="pr">🏆 PR榜</button>
   <button data-tab="report">📊 报告</button>
   <button data-tab="history">📅 历史</button>
+  <button data-tab="me">⚙️ 设置</button>
 </nav>
 
 <div class="wrap">
@@ -161,6 +170,7 @@
 
   <!-- ========== 填报页 ========== -->
   <section id="page-log">
+    <div id="energyCard"></div>
     <div id="planCard"></div>
     <div class="card">
       <h2>记录日期 <span class="tag">可补填以前的日子</span></h2>
@@ -250,6 +260,58 @@
       <div class="muted">空着不填的日子自动算休息日，不会出现在下面。建议每周导出一次备份。</div>
       <div id="historyList" style="margin-top:10px;"></div>
     </div>
+
+  <!-- ========== 设置页 ========== -->
+  <section id="page-me" style="display:none;">
+    <div class="card">
+      <h2>👤 个人资料 <span class="tag">用于计算每日消耗</span></h2>
+      <div class="row">
+        <label class="fld">性别
+          <select id="pfSex">
+            <option value="">未设置</option>
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+        </label>
+        <label class="fld">年龄
+          <input type="number" id="pfAge" inputmode="numeric" min="10" max="99" placeholder="25">
+        </label>
+      </div>
+      <div class="row">
+        <label class="fld">身高
+          <input type="number" id="pfHeight" inputmode="decimal" min="100" max="230" placeholder="175">
+        </label>
+        <span class="unit">cm</span>
+        <label class="fld">体重
+          <input type="number" id="pfWeight" inputmode="decimal" min="30" max="200" step="0.1" placeholder="70">
+        </label>
+        <span class="unit">kg</span>
+      </div>
+      <div class="muted" id="pfHint" style="margin-top:6px;">填完之后，首页会显示今日热量消耗</div>
+    </div>
+
+    <div class="card">
+      <h2>⚖️ 体重记录 <span class="tag">建议每天早上空腹称</span></h2>
+      <div class="row">
+        <label class="fld">日期<input type="date" id="wtDate"></label>
+        <label class="fld">体重<input type="number" id="wtValue" inputmode="decimal" step="0.1" placeholder="70.0"></label>
+        <span class="unit">kg</span>
+      </div>
+      <button class="btn btn-add" id="wtSave" style="margin-bottom:8px;">+ 记录体重</button>
+      <div id="wtChart"></div>
+      <div id="wtList" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <h2>💾 数据备份</h2>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="meExportJson">⬇️ 备份 JSON</button>
+        <button class="btn btn-ghost" id="meImport">⬆️ 恢复 JSON</button>
+      </div>
+      <div id="snapBox" class="muted" style="margin-top:6px;"></div>
+      <div class="muted" style="margin-top:8px;">数据存在这台设备，清浏览器会丢，建议每周导一次。</div>
+    </div>
+  </section>
   </section>
 
 </div>
@@ -413,9 +475,13 @@
     }
   }
   function afterLoad(){
+    loadProfile();
+    loadWeights();
+    pushSnapshot();
     loadDraft();
     renderStatus();
     renderMode();
+    renderEnergy();
   }
   function bootLoad(){
     var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
@@ -477,13 +543,14 @@
     btn.addEventListener("click",function(){
       document.querySelectorAll("nav.tabs button").forEach(function(b){b.classList.remove("active");});
       btn.classList.add("active");
-      ["log","pr","report","history"].forEach(function(t){
+      ["log","pr","report","history","me"].forEach(function(t){
         document.getElementById("page-"+t).style.display = (t===btn.dataset.tab?"":"none");
       });
       document.getElementById("saveBtn").style.display = (btn.dataset.tab==="log"?"block":"none");
       if(btn.dataset.tab==="pr") renderPR();
       if(btn.dataset.tab==="report") renderReport();
       if(btn.dataset.tab==="history") renderHistory();
+      if(btn.dataset.tab==="me") renderMe();
       document.getElementById("statusBar").style.display = (btn.dataset.tab==="log" ? "" : "none");
       if(btn.dataset.tab==="log"){ renderStatus(); renderPlan(); }
       window.scrollTo(0,0);
@@ -592,6 +659,7 @@
       '<button class="del" data-cat="cardio" data-idx="'+idx+'">删除</button>'+
     '</div>'+
     '<div class="row"><label class="fld">强度（选填，如档位/配速）<input type="text" data-cat="cardio" data-idx="'+idx+'" data-field="intensity" value="'+(item.intensity||"").replace(/"/g,"&quot;")+'" placeholder="如 15档 / 6分配速"></label></div>'+
+    '<div class="row" style="margin-bottom:0;"><label class="chk"><input type="checkbox" data-cat="cardio" data-idx="'+idx+'" data-field="counted"'+(item.counted?" checked":"")+'> 这段已计入今日步数（勾上则从步数里扣除，避免重复计算）</label></div>'+
     '</div>';
   }
 
@@ -665,6 +733,10 @@
     if(!el.dataset.field) return;
     syncFields();
     var cat = el.dataset.cat, idx = +el.dataset.idx, field = el.dataset.field;
+    if(el.type === "checkbox"){
+      draft[cat][idx][field] = el.checked;
+      return;
+    }
     if(field==="name"){
       var v = el.value;
       if(v===CUSTOM){ draft[cat][idx].name = ""; }
@@ -697,6 +769,7 @@
     document.querySelectorAll("#page-log [data-field]").forEach(function(el){
       var cat=el.dataset.cat, idx=+el.dataset.idx, field=el.dataset.field;
       if(!draft[cat] || !draft[cat][idx]) return;
+      if(el.type === "checkbox"){ draft[cat][idx][field] = el.checked; return; }
       if(field==="customName"){
         // 自定义名称框代表 name
         draft[cat][idx].name = el.value.trim();
@@ -871,7 +944,7 @@
     var w = +it.weight || 0;
     var bw = BW_LIB[it.name];
     if(!w && bw){
-      w = 70 * bw[1];
+      w = bodyKg() * bw[1];
       if(!reps) reps = 30;          // 平板支撑、靠墙静蹲这类计时动作按 30 秒折算
     }
     return sets * reps * w;
@@ -1030,6 +1103,7 @@
       "今天 " + todayStr() + " 星期" + ["日","一","二","三","四","五","六"][d.getDay()] + " · 空着不填自动算休息日";
 
     renderPlan();
+    renderEnergy();
   }
 
   /* ============ 明日训练建议 ============ */
@@ -1413,6 +1487,180 @@
   }
 
   /* ============ 导出 / 导入（导出文件由后端按数据库生成） ============ */
+  /* ============ 个人资料 / 体重 / 热量估算 ============ */
+  var PROFILE_KEY = "fitness_profile_v1";
+  var WEIGHT_KEY  = "fitness_weights_v1";
+  var SNAP_KEY    = "fitness_snapshots_v1";
+  var profile = { sex:"", age:"", height:"", weight:"" };
+  var weightLog = {};
+
+  function loadProfile(){
+    try{
+      var p = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") || {};
+      profile = { sex: p.sex || "", age: p.age || "", height: p.height || "", weight: p.weight || "" };
+    }catch(e){ profile = { sex:"", age:"", height:"", weight:"" }; }
+  }
+  function saveProfile(){
+    try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); }catch(e){}
+  }
+  function loadWeights(){
+    try{ weightLog = JSON.parse(localStorage.getItem(WEIGHT_KEY) || "{}") || {}; }
+    catch(e){ weightLog = {}; }
+  }
+  function saveWeights(){
+    try{ localStorage.setItem(WEIGHT_KEY, JSON.stringify(weightLog)); }catch(e){}
+  }
+  function bodyKg(){ return +profile.weight || 70; }
+
+  /* 每次打开页面存一份快照，最多 3 份，误操作可回滚 */
+  function pushSnapshot(){
+    try{
+      var list = JSON.parse(localStorage.getItem(SNAP_KEY) || "[]");
+      if(!Array.isArray(list)) list = [];
+      var today = todayStr();
+      for(var i=0;i<list.length;i++){ if(list[i].date === today) return; }
+      var payload = JSON.stringify(records);
+      if(payload.length > 1500000) return;
+      list.unshift({ date: today, data: payload, days: Object.keys(records).length });
+      localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0,3)));
+    }catch(e){}
+  }
+
+  /* ---- 热量：MET × 3.5 × 体重 ÷ 200 × 分钟 ---- */
+  var CARDIO_MET = {
+    "跑步机":8.3, "跑步":8.3, "爬坡走":6.0, "快走":4.3, "户外骑行":7.5,
+    "单车":6.8, "椭圆机":5.0, "划船机":7.0, "台阶机":8.0, "滑雪机":7.0,
+    "跳绳":12.3, "战绳":10.0, "间歇跑(HIIT)":9.0, "HIIT循环训练":8.0,
+    "游泳":7.0, "足球":7.0
+  };
+  function cardioMet(item){
+    var m = CARDIO_MET[item.name] || 5.0;
+    var t = String(item.intensity || "");
+    if(/激烈|高强|冲刺|全部/.test(t)) m = m * 1.15;
+    else if(/轻松|慢/.test(t)) m = m * 0.85;
+    return m;
+  }
+  function kcalMet(met, kg, minutes){ return met * 3.5 * kg / 200 * minutes; }
+
+  function bmrValue(){
+    var w = +profile.weight, h = +profile.height, a = +profile.age;
+    if(!w || !h || !a || !profile.sex) return null;
+    var base = 10 * w + 6.25 * h - 5 * a;
+    return Math.round(profile.sex === "male" ? base + 5 : base - 161);
+  }
+
+  function dayEnergy(dateStr){
+    var kg = bodyKg(), bmr = bmrValue();
+    var out = { ok: !!bmr, bmr: bmr || 0, daily: 0, stepKcal: 0, liftKcal: 0,
+                cardioKcal: 0, total: 0, steps: 0, liftMin: 0, cardioMin: 0 };
+    if(!bmr) return out;
+    var r = records[dateStr];
+    if(!r) return out;
+    var steps = +r.steps || 0, overlap = 0;
+    (r.cardio || []).forEach(function(c){
+      var mins = +c.duration || 0;
+      if(mins <= 0) return;
+      out.cardioMin += mins;
+      out.cardioKcal += kcalMet(cardioMet(c), kg, mins);
+      if(c.counted) overlap += Math.round(mins * 110);   // 估算这段走/跑了多少步
+    });
+    var sets = 0;
+    ["strength","machines"].forEach(function(cat){
+      (r[cat] || []).forEach(function(it){ sets += +it.sets || 0; });
+    });
+    var rpe = +(r.rpe || 0) || 6;
+    var liftMet = rpe <= 6 ? 3.5 : (rpe >= 9 ? 6.0 : 5.0);
+    out.liftMin = sets * 3;                              // 每组含休息约 3 分钟
+    out.liftKcal = kcalMet(liftMet, kg, out.liftMin);
+    out.steps = Math.max(0, steps - overlap);
+    out.stepKcal = out.steps * kg * 0.0005;
+    out.daily = bmr * 0.15;
+    out.total = out.bmr + out.daily + out.stepKcal + out.liftKcal + out.cardioKcal;
+    return out;
+  }
+
+  function energyLine(label, val){
+    return '<div class="energy-line"><span>' + label + '</span><b>' + Math.round(val).toLocaleString() + '</b></div>';
+  }
+  function renderEnergy(){
+    var box = document.getElementById("energyCard");
+    if(!box) return;
+    var e = dayEnergy(currentDate);
+    if(!e.ok){
+      box.innerHTML = '<div class="card energy-card">' +
+        '<h2>🔥 今日消耗 <span class="tag">估算</span></h2>' +
+        '<div class="muted">去「⚙️ 设置」填一下性别、年龄、身高、体重，就能算出今天消耗了多少。</div>' +
+        '</div>';
+      return;
+    }
+    box.innerHTML = '<div class="card energy-card">' +
+      '<h2>🔥 今日消耗 <span class="tag">估算 ±20%</span></h2>' +
+      '<div class="energy-total">' + Math.round(e.total).toLocaleString() + ' <span>kcal</span></div>' +
+      energyLine("基础代谢", e.bmr) +
+      energyLine("日常活动", e.daily) +
+      energyLine("步行 " + e.steps.toLocaleString() + " 步", e.stepKcal) +
+      energyLine("训练 " + Math.round(e.liftMin + e.cardioMin) + " 分钟", e.liftKcal + e.cardioKcal) +
+      '</div>';
+  }
+
+  /* ---- 体重趋势图 ---- */
+  function svgWeight(pts){
+    if(pts.length < 2) return '<div class="empty" style="padding:18px;">再记一次体重就能看到趋势（至少 2 次）</div>';
+    var W = 620, H = 200, L = 44, R = 14, T = 18, B = 30;
+    var vals = pts.map(function(p){ return p.kg; });
+    var max = Math.max.apply(null, vals), min = Math.min.apply(null, vals);
+    if(max === min){ max += 1; min -= 1; }
+    var pad = (max - min) * 0.2; max += pad; min = Math.max(0, min - pad);
+    function x(i){ return L + i * (W - L - R) / (pts.length - 1); }
+    function y(v){ return T + (1 - (v - min) / (max - min)) * (H - T - B); }
+    var g = "";
+    for(var i=0;i<=3;i++){
+      var gy = T + i * (H - T - B) / 3, gv = max - (max - min) * i / 3;
+      g += '<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="#e2e8f0" stroke-width="1"/>';
+      g += '<text x="'+(L-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="11" fill="#94a3b8">'+gv.toFixed(1)+'</text>';
+    }
+    var path = pts.map(function(p,i){ return (i?"L":"M") + x(i).toFixed(1) + "," + y(p.kg).toFixed(1); }).join(" ");
+    g += '<path d="'+path+'" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linejoin="round"/>';
+    pts.forEach(function(p,i){
+      g += '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.kg).toFixed(1)+'" r="3" fill="#0f766e"/>';
+      if(i === 0 || i === pts.length-1){
+        g += '<text x="'+x(i).toFixed(1)+'" y="'+(y(p.kg)-8).toFixed(1)+'" text-anchor="middle" font-size="11" fill="#115e59" font-weight="bold">'+p.kg+'</text>';
+        g += '<text x="'+x(i).toFixed(1)+'" y="'+(H-B+16)+'" text-anchor="middle" font-size="10.5" fill="#94a3b8">'+p.date.slice(5)+'</text>';
+      }
+    });
+    return '<div class="chart-box"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;">'+g+'</svg></div>';
+  }
+
+  function renderMe(){
+    var sex = document.getElementById("pfSex");
+    if(!sex) return;
+    sex.value = profile.sex || "";
+    document.getElementById("pfAge").value = profile.age || "";
+    document.getElementById("pfHeight").value = profile.height || "";
+    document.getElementById("pfWeight").value = profile.weight || "";
+    var bmr = bmrValue();
+    document.getElementById("pfHint").textContent = bmr
+      ? ("基础代谢约 " + bmr + " kcal/天" )
+      : "填完之后，首页会显示今日热量消耗";
+
+    document.getElementById("wtDate").value = document.getElementById("wtDate").value || todayStr();
+    var dates = Object.keys(weightLog).sort();
+    var pts = dates.slice(-30).map(function(d){ return { date:d, kg:+weightLog[d] }; }).filter(function(p){ return p.kg > 0; });
+    document.getElementById("wtChart").innerHTML = svgWeight(pts);
+    var last = dates.slice(-7).reverse();
+    document.getElementById("wtList").innerHTML = last.length
+      ? ("最近：" + last.map(function(d){ return d.slice(5) + " " + weightLog[d] + "kg"; }).join("　"))
+      : "还没有体重记录";
+
+    var snaps = [];
+    try{ snaps = JSON.parse(localStorage.getItem(SNAP_KEY) || "[]") || []; }catch(e){}
+    document.getElementById("snapBox").innerHTML = snaps.length
+      ? ("本地快照：" + snaps.map(function(x,i){
+          return '<button class="btn btn-ghost" style="padding:4px 8px;font-size:12px;margin:2px;" data-snap="'+i+'">'+x.date+'（'+x.days+'天）</button>';
+        }).join(""))
+      : "暂无快照";
+  }
+
   /* ============ 导出（纯前端，服务端/本机存储都能用） ============ */
   function csvCell(v){
     var t = String(v==null ? "" : v);
@@ -1482,6 +1730,59 @@
     };
     reader.readAsText(f);
     e.target.value="";
+  });
+
+
+  /* ============ 设置页交互 ============ */
+  ["pfSex","pfAge","pfHeight","pfWeight"].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("change", function(){
+      profile.sex = document.getElementById("pfSex").value;
+      profile.age = document.getElementById("pfAge").value;
+      profile.height = document.getElementById("pfHeight").value;
+      profile.weight = document.getElementById("pfWeight").value;
+      saveProfile();
+      renderMe();
+      renderEnergy();
+      renderStatus();
+    });
+  });
+
+  document.getElementById("wtSave").addEventListener("click", function(){
+    var d = document.getElementById("wtDate").value;
+    var v = +document.getElementById("wtValue").value;
+    if(!d || !v){ toast("先填日期和体重"); return; }
+    weightLog[d] = Math.round(v * 10) / 10;
+    saveWeights();
+    if(d === todayStr()){ profile.weight = weightLog[d]; saveProfile(); }
+    document.getElementById("wtValue").value = "";
+    toast("已记录 " + weightLog[d] + " kg");
+    renderMe(); renderEnergy(); renderStatus();
+  });
+
+  document.getElementById("wtDate").addEventListener("change", function(){
+    var d = this.value;
+    document.getElementById("wtValue").value = weightLog[d] || "";
+  });
+
+  document.getElementById("snapBox").addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("[data-snap]") : null;
+    if(!b) return;
+    var list = [];
+    try{ list = JSON.parse(localStorage.getItem(SNAP_KEY) || "[]") || []; }catch(err){}
+    var snap = list[+b.dataset.snap];
+    if(!snap) return;
+    if(!confirm("用 " + snap.date + " 的快照覆盖当前全部记录？当前数据会被替换。")) return;
+    try{
+      records = JSON.parse(snap.data);
+      saveRecords().then(function(){ toast("已恢复到 " + snap.date); loadDraft(); renderMe(); }).catch(saveFail);
+    }catch(err){ toast("快照已损坏"); }
+  });
+
+  document.getElementById("meExportJson").addEventListener("click", function(){ exportJson(); });
+  document.getElementById("meImport").addEventListener("click", function(){
+    document.getElementById("importJsonFile").click();
   });
 
   /* ============ 初始化（先从本地服务拉取数据） ============ */
