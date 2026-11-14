@@ -264,18 +264,34 @@
   /* ============ 基础数据 ============ */
 
   // 预置动作：名称 -> 部位
+  /* 自重动作：名字 -> [部位, 体重系数]（系数用于估算训练负荷） */
+  var BW_LIB = {
+    "俯卧撑": ["胸", 0.65], "宽距俯卧撑": ["胸", 0.60], "钻石俯卧撑": ["胸", 0.65],
+    "上斜俯卧撑": ["胸", 0.50], "下斜俯卧撑": ["胸", 0.80], "双杠臂屈伸": ["胸", 1.00],
+    "引体向上": ["背", 1.00], "反手引体向上": ["背", 1.00], "窄距引体向上": ["背", 1.00],
+    "反向划船": ["背", 0.50], "超人式": ["背", 0.30], "俯卧挺身": ["背", 0.35],
+    "自重深蹲": ["腿", 0.75], "自重箭步蹲": ["腿", 0.70], "自重臀桥": ["腿", 0.50],
+    "单腿臀桥": ["腿", 0.50], "自重提踵": ["腿", 0.90], "靠墙静蹲": ["腿", 0.60],
+    "手枪深蹲": ["腿", 0.80],
+    "倒立撑": ["肩", 0.90], "派克俯卧撑": ["肩", 0.70],
+    "板凳臂屈伸": ["手臂", 0.50], "反手俯卧撑": ["手臂", 0.60],
+    "平板支撑": ["核心", 0.30], "侧平板支撑": ["核心", 0.30], "仰卧举腿": ["核心", 0.30],
+    "登山者": ["核心", 0.35], "死虫式": ["核心", 0.20], "V字卷腹": ["核心", 0.30],
+    "自行车卷腹": ["核心", 0.25], "卷腹": ["核心", 0.30], "悬垂举腿": ["核心", 0.35]
+  };
+
   var PRESET_STRENGTH = {
-    "杠铃卧推":"胸","哑铃卧推":"胸","上斜杠铃卧推":"胸","上斜哑铃卧推":"胸",
+    "杠铃卧推":"胸","俯卧撑":"胸","宽距俯卧撑":"胸","钻石俯卧撑":"胸","上斜俯卧撑":"胸","下斜俯卧撑":"胸","哑铃卧推":"胸","上斜杠铃卧推":"胸","上斜哑铃卧推":"胸",
     "双杠臂屈伸":"胸","哑铃飞鸟":"胸",
-    "引体向上":"背","杠铃划船":"背","哑铃划船":"背","T杠划船":"背",
+    "引体向上":"背","反手引体向上":"背","窄距引体向上":"背","超人式":"背","俯卧挺身":"背","杠铃划船":"背","哑铃划船":"背","T杠划船":"背",
     "反向划船":"背","耸肩":"背",
-    "杠铃深蹲":"腿","前蹲":"腿","传统硬拉":"腿","罗马尼亚硬拉":"腿",
+    "杠铃深蹲":"腿","自重深蹲":"腿","自重箭步蹲":"腿","自重臀桥":"腿","单腿臀桥":"腿","自重提踵":"腿","靠墙静蹲":"腿","手枪深蹲":"腿","前蹲":"腿","传统硬拉":"腿","罗马尼亚硬拉":"腿",
     "哑铃箭步蹲":"腿","保加利亚分腿蹲":"腿","杠铃臀推":"腿","站姿提踵":"腿",
-    "杠铃推举":"肩","哑铃推举":"肩","哑铃侧平举":"肩","哑铃前平举":"肩",
+    "杠铃推举":"肩","倒立撑":"肩","派克俯卧撑":"肩","哑铃推举":"肩","哑铃侧平举":"肩","哑铃前平举":"肩",
     "俯身飞鸟":"肩","直立划船":"肩",
-    "杠铃弯举":"手臂","哑铃弯举":"手臂","锤式弯举":"手臂","集中弯举":"手臂",
+    "杠铃弯举":"手臂","板凳臂屈伸":"手臂","反手俯卧撑":"手臂","哑铃弯举":"手臂","锤式弯举":"手臂","集中弯举":"手臂",
     "窄距卧推":"手臂","仰卧臂屈伸":"手臂",
-    "卷腹":"核心","悬垂举腿":"核心","俄罗斯转体":"核心","平板支撑":"核心"
+    "卷腹":"核心","侧平板支撑":"核心","仰卧举腿":"核心","登山者":"核心","死虫式":"核心","V字卷腹":"核心","自行车卷腹":"核心","悬垂举腿":"核心","俄罗斯转体":"核心","平板支撑":"核心"
   };
   var PRESET_MACHINE = {
     "坐姿推胸机":"胸","上斜器械推胸":"胸","器械飞鸟":"胸","蝴蝶机夹胸":"胸",
@@ -515,8 +531,13 @@
     }
     push(recentActions(cat, 5).filter(function(n){ return map[n] && !used[n]; }), "最近用过");
     push(Object.keys(map).filter(function(k){ return (CUSTOM_LIB[cat]||{})[k] && !used[k]; }), "我的动作");
+    if(cat === "strength"){
+      push(Object.keys(map).filter(function(k){ return BW_LIB[k] && !used[k]; }), "自重训练");
+    }
     PARTS.forEach(function(part){
-      push(Object.keys(map).filter(function(k){ return map[k]===part && !used[k]; }), part);
+      push(Object.keys(map).filter(function(k){
+        return map[k]===part && !used[k] && !(cat === "strength" && BW_LIB[k]);
+      }), part);
     });
     push(Object.keys(map).filter(function(k){ return !used[k] && PARTS.indexOf(map[k])<0; }), "其他");
     html += '<option value="'+CUSTOM+'"'+(val && !map[val]?" selected":"")+'>'+CUSTOM+'</option>';
@@ -842,6 +863,19 @@
     var finish = new Date(+p[0], +p[1]-1, +p[2], 20, 0, 0);
     return Math.max(0, (toDate - finish) / 3600000);
   }
+  // 单条训练负荷：有重量用手填重量；自重动作按 体重70kg × 系数 折算
+  function itemLoad(it){
+    var sets = +it.sets || 0;
+    if(sets <= 0) return 0;
+    var reps = +it.reps || 0;
+    var w = +it.weight || 0;
+    var bw = BW_LIB[it.name];
+    if(!w && bw){
+      w = 70 * bw[1];
+      if(!reps) reps = 30;          // 平板支撑、靠墙静蹲这类计时动作按 30 秒折算
+    }
+    return sets * reps * w;
+  }
   function dayPartLoads(r){
     var out = {};
     ["strength","machines"].forEach(function(cat){
@@ -849,7 +883,7 @@
         if(!it.name) return;
         var part = it.part || "其他";
         if(!out[part]) out[part] = {load:0, sets:0, compound:false};
-        out[part].load += (+it.weight||0)*(+it.reps||0)*(+it.sets||0);
+        out[part].load += itemLoad(it);
         out[part].sets += (+it.sets||0);
         if(COMPOUND[it.name]) out[part].compound = true;
       });
@@ -1053,7 +1087,6 @@
       return;
     }
 
-    var BODYWEIGHT = {"引体向上":1,"双杠臂屈伸":1,"卷腹":1,"悬垂举腿":1,"平板支撑":1,"反向划船":1,"辅助引体机":1};
     var perPart = plan.parts.length > 1 ? 2 : 3;
     var itemsHtml = "", totalSets = 0, totalLoad = 0, reasons = [];
     plan.parts.forEach(function(x){
@@ -1062,7 +1095,7 @@
         : x.part + "已休 " + Math.round(x.days) + " 天、本周 " + x.weekCount + " 次");
       actionsForPart(x.part).slice(0, perPart).forEach(function(it){
         var sets = +it.sets || 3, reps = +it.reps || 10, w = +it.weight || 0;
-        var isBw = !!BODYWEIGHT[it.name];
+        var isBw = !!BW_LIB[it.name];
         var shown = (w * reps * sets) || 0;
         totalSets += sets; totalLoad += shown;
         var wTxt = w ? (w + 'kg · ') : (isBw ? '自重 · ' : '');
