@@ -1521,6 +1521,7 @@
       if(!Array.isArray(list)) list = [];
       var today = todayStr();
       for(var i=0;i<list.length;i++){ if(list[i].date === today) return; }
+      if(Object.keys(records).length === 0) return;
       var payload = JSON.stringify(records);
       if(payload.length > 1500000) return;
       list.unshift({ date: today, data: payload, days: Object.keys(records).length });
